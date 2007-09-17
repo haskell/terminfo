@@ -1,0 +1,20 @@
+Name:           terminfo
+Cabal-Version:  >=1.1.4
+Version:        0.0
+License:        BSD3
+License-File:   LICENSE
+Copyright:      (c) Judah Jacobson
+Author:         Judah Jacobson
+Maintainer:     Judah Jacobson <judah.jacobson@gmail.com>
+Category:       User Interfaces
+Synopsis:       Haskell interface to the terminfo library.
+Stability:      Experimental
+Build-depends:  base>=1.0
+Extensions:     FlexibleInstances, ForeignFunctionInterface
+Exposed-Modules:
+                System.Console.Terminfo.Base
+Extra-Source-Files: 
+                configure.ac terminfo.buildinfo.in configure
+Extra-Tmp-Files:
+                autom4te.cache config.log config.status
+                terminfo.buildinfo
