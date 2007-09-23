@@ -1,4 +1,4 @@
--- | This module provides a low-level interface with the C functions of the 
+-- | This module provides a low-level interface to the C functions of the 
 -- terminfo library. 
 module System.Console.Terminfo.Base(
                             setupTerm,
@@ -26,7 +26,7 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 
 -- | Initialize the terminfo library to the given terminal entry.
 --
--- NOTE: Either 'setupTerm' or 'setupTermFromEnv' must be run before any capabilities
+-- Note: Either 'setupTerm' or 'setupTermFromEnv' must be run before any capabilities
 -- are looked up.
 setupTerm :: String -> IO ()
 setupTerm term = withCString term $ \c_term -> 
