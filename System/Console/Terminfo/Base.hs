@@ -1,6 +1,7 @@
 -- | This module provides a low-level interface to the C functions of the 
 -- terminfo library. 
 module System.Console.Terminfo.Base(
+                            Terminal(),
                             setupTerm,
                             setupTermFromEnv,
                             tiGetFlag,
@@ -14,12 +15,21 @@ module System.Console.Terminfo.Base(
                             ) where
 
 import Foreign.C
+import Foreign.ForeignPtr
 import Foreign.Ptr
 import Foreign.Marshal
 import Foreign.Storable
 import System.Environment
 import Control.Monad
 import System.IO.Unsafe
+import Control.Concurrent.MVar
+
+data TERMINAL = TERMINAL
+newtype Terminal = Terminal (ForeignPtr TERMINAL)
+
+foreign import ccall "&" cur_term :: Ptr (Ptr TERMINAL)
+foreign import ccall set_curterm :: Ptr TERMINAL -> IO (Ptr TERMINAL)
+foreign import ccall "&" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
 
 -- TODO: Explicit header import.
 foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
@@ -28,17 +38,19 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 --
 -- Note: Either 'setupTerm' or 'setupTermFromEnv' must be run before any capabilities
 -- are looked up.
-setupTerm :: String -> IO ()
+setupTerm :: String -> IO Terminal
 setupTerm term = withCString term $ \c_term -> 
                     with 0 $ \ret_ptr -> do
                         let stdOutput = 1
                         setupterm c_term stdOutput ret_ptr
                         ret <- peek ret_ptr
                         when (ret /= 1) $ error ("Couldn't lookup terminfo entry " ++ show term)
+                        cterm <- peek cur_term
+                        fmap Terminal $ newForeignPtr del_curterm cterm
                             
 -- | Initialize the terminfo library, using the @TERM@ environmental variable.
 -- If @TERM@ is not set, we use the generic, minimal entry @dumb@.
-setupTermFromEnv :: IO ()
+setupTermFromEnv :: IO Terminal
 setupTermFromEnv = do
     env_term <- getEnv "TERM" 
     let term = if null env_term then "dumb" else env_term
@@ -51,11 +63,21 @@ class Capability a where
     getCap :: String -> Int (Available a)
 --}
 
+-- ncurses is extremely unsafe for multithreaded calls.
+{-# NOINLINE cursesLock #-}
+cursesLock :: MVar TERMINAL
+cursesLock = unsafePerformIO $ newMVar TERMINAL
+
+withCurTerm :: (CString -> IO a) -> Terminal -> String -> a
+withCurTerm f (Terminal term) cap = unsafePerformIO $ withMVar cursesLock $ \_ -> 
+    withForeignPtr term set_curterm >> withCString cap f
+
+
 foreign import ccall tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
-tiGetNum :: String -> IO (Maybe Int)
-tiGetNum cap = withCString cap $ \c_cap -> do
+tiGetNum :: Terminal -> String -> Maybe Int
+tiGetNum = withCurTerm $ \c_cap -> do
                 n <- fmap fromEnum (tigetnum c_cap)
                 if n >= 0
                     then return (Just n)
@@ -63,8 +85,8 @@ tiGetNum cap = withCString cap $ \c_cap -> do
 
 foreign import ccall tigetflag :: CString -> IO CInt
 -- | Look up a boolean capability in the terminfo database.
-tiGetFlag :: String -> IO Bool
-tiGetFlag cap = withCString cap $ \c_cap -> 
+tiGetFlag :: Terminal -> String -> Bool
+tiGetFlag = withCurTerm $ \c_cap -> do
                 fmap (>0) (tigetflag c_cap)
                 
                 
@@ -73,8 +95,8 @@ foreign import ccall tigetstr :: CString -> IO CString
 -- | Look up a string capability in the terminfo database.  
 --
 -- Note: All terminfo strings should be printed with 'tPuts'.
-tiGetStr :: String -> IO (Maybe String)
-tiGetStr cap = withCString cap $ \c_cap -> do
+tiGetStr :: Terminal -> String -> Maybe String
+tiGetStr = withCurTerm $ \c_cap -> do
                 result <- tigetstr c_cap
                 if result == nullPtr || result == neg1Ptr
                     then return Nothing
