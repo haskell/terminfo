@@ -10,8 +10,6 @@ module System.Console.Terminfo.Base(
                             tPuts,
                             LinesAffected,
                             tParm,
-                            TParm(..),
-                            TParmInput
                             ) where
 
 import Foreign.C
@@ -115,53 +113,17 @@ foreign import ccall tparm ::
 -- with tput without a String marshall in the middle.
 -- directly without 
 
-type TParmInput = (Int, Int, Int, Int, Int, Int, Int, Int, Int)
-
-class TParm a where
-    toTParmInput :: a -> TParmInput
-
-instance TParm TParmInput where
-    toTParmInput = id
-
-instance TParm Int where
-    toTParmInput p1 = (p1,0,0,0,0,0,0,0,0)
-
-instance TParm (Int,Int) where
-    toTParmInput (p1,p2) = (p1,p2,0,0,0,0,0,0,0)
-
-instance TParm (Int,Int,Int) where
-    toTParmInput (p1,p2,p3) = (p1,p2,p3,0,0,0,0,0,0)
-
-instance TParm (Int,Int,Int,Int) where
-    toTParmInput (p1,p2,p3,p4) = (p1,p2,p3,p4,0,0,0,0,0)
-
-instance TParm (Int,Int,Int,Int,Int) where
-    toTParmInput (p1,p2,p3,p4,p5) = (p1,p2,p3,p4,p5,0,0,0,0)
-
-instance TParm (Int,Int,Int,Int,Int,Int) where
-    toTParmInput (p1,p2,p3,p4,p5,p6) = (p1,p2,p3,p4,p5,p6,0,0,0)
-
-instance TParm (Int,Int,Int,Int,Int,Int,Int) where
-    toTParmInput (p1,p2,p3,p4,p5,p6,p7) = (p1,p2,p3,p4,p5,p6,p7,0,0)
-
-instance TParm (Int,Int,Int,Int,Int,Int,Int,Int) where
-    toTParmInput (p1,p2,p3,p4,p5,p6,p7,p8) = (p1,p2,p3,p4,p5,p6,p7,p8,0)
-
-
 -- Note: the purity of this function really depends on the implementation;
 -- and this may not be multithreaded-safe.
-tparm_base :: String -> TParmInput -> String
-tparm_base cap (p1,p2,p3,p4,p5,p6,p7,p8,p9)
-    = unsafePerformIO $ withCString cap $ \c_cap -> do
-        result <- tparm c_cap (toEnum p1) (toEnum p2) (toEnum p3) (toEnum p4) 
-                    (toEnum p5) (toEnum p6) (toEnum p7) (toEnum p8) (toEnum p9)
-        peekCString result
+tParm :: String -> [Int] -> String
+tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
+    where tparm' (p1:p2:p3:p4:p5:p6:p7:p8:p9:_)
+            = unsafePerformIO $ withCString cap $ \c_cap -> do
+                result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
+                peekCString result
 
 -- | Substitute parameters into a string capability.
 --
--- Note: All terminfo strings should be printed with 'tPuts'.
-tParm :: TParm a => String -> a -> String
-tParm s x = tparm_base s (toTParmInput x)
 
 
 
