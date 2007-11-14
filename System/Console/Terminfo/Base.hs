@@ -14,17 +14,18 @@ module System.Console.Terminfo.Base(
                             termOutput
                             ) where
 
+
+import Control.Concurrent.MVar
+import Control.Monad (when)
+import Data.Monoid
 import Foreign.C
 import Foreign.ForeignPtr
 import Foreign.Ptr
 import Foreign.Marshal
-import Foreign.Storable
-import System.Environment
-import Control.Monad
-import System.IO.Unsafe
-import Control.Concurrent.MVar
+import Foreign.Storable (peek)
+import System.Environment (getEnv)
+import System.IO.Unsafe (unsafePerformIO)
 
-import Data.Monoid
 
 data TERMINAL = TERMINAL
 newtype Terminal = Terminal (ForeignPtr TERMINAL)
@@ -33,7 +34,6 @@ foreign import ccall "&" cur_term :: Ptr (Ptr TERMINAL)
 foreign import ccall set_curterm :: Ptr TERMINAL -> IO (Ptr TERMINAL)
 foreign import ccall "&" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
 
--- TODO: Explicit header import.
 foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 
 -- | Initialize the terminfo library to the given terminal entry.
@@ -70,7 +70,6 @@ cursesLock = unsafePerformIO $ newMVar TERMINAL
 
 withCursesLock :: IO a -> IO a
 withCursesLock f = withMVar cursesLock $ \_ -> f
-
 
 withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withCursesLock $ do
@@ -134,8 +133,6 @@ tiGetOutput cap term = do
     return $ flip fmap mstr $ \str ps la -> TermOutput $ do
         outStr <- tParm str ps
         tPuts outStr la
-
-
 
 
 foreign import ccall tputs :: CString -> CInt -> FunPtr (CInt -> IO CInt) -> IO ()
