@@ -1,5 +1,7 @@
 -- | This module provides a low-level interface to the C functions of the 
 -- terminfo library. 
+-- 
+-- NOTE: Since this library is built on top of the curses interface, it is not thread-safe.
 module System.Console.Terminfo.Base(
                             Terminal(),
                             setupTerm,
@@ -15,7 +17,6 @@ module System.Console.Terminfo.Base(
                             ) where
 
 
-import Control.Concurrent.MVar
 import Control.Monad (when)
 import Data.Monoid
 import Foreign.C
@@ -39,7 +40,7 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 -- | Initialize the terminfo library to the given terminal entry.
 --
 setupTerm :: String -> IO Terminal
-setupTerm term = withCursesLock $ withCString term $ \c_term -> 
+setupTerm term = withCString term $ \c_term -> 
                     with 0 $ \ret_ptr -> do
                         let stdOutput = 1
                         setupterm c_term stdOutput ret_ptr
@@ -56,32 +57,15 @@ setupTermFromEnv = do
     let term = if null env_term then "dumb" else env_term
     setupTerm term
 
-{-- TODO: maybe???
-data Available a = WrongType | Absent | Present a
-flag : ()
-class Capability a where
-    getCap :: String -> Int (Available a)
---}
-
--- ncurses is extremely unsafe for multithreaded calls.
-{-# NOINLINE cursesLock #-}
-cursesLock :: MVar TERMINAL
-cursesLock = unsafePerformIO $ newMVar TERMINAL
-
-withCursesLock :: IO a -> IO a
-withCursesLock f = withMVar cursesLock $ \_ -> f
-
 withCurTerm :: Terminal -> IO a -> IO a
-withCurTerm (Terminal term) f = withCursesLock $ do
-    withForeignPtr term set_curterm 
-    f
+withCurTerm (Terminal term) f = withForeignPtr term set_curterm >> f
 
 
 foreign import ccall tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
-tiGetNum :: String -> Terminal -> IO (Maybe Int)
-tiGetNum cap term = withCurTerm term $ do
+tiGetNum :: String -> Terminal -> Maybe Int
+tiGetNum cap term = unsafePerformIO $ withCurTerm term $ do
                 n <- fmap fromEnum (withCString cap tigetnum)
                 if n >= 0
                     then return (Just n)
@@ -89,8 +73,8 @@ tiGetNum cap term = withCurTerm term $ do
 
 foreign import ccall tigetflag :: CString -> IO CInt
 -- | Look up a boolean capability in the terminfo database.
-tiGetFlag :: String -> Terminal -> IO Bool
-tiGetFlag cap term = withCurTerm term $ 
+tiGetFlag :: String -> Terminal -> Bool
+tiGetFlag cap term = unsafePerformIO $ withCurTerm term $ 
                 fmap (>0) (withCString cap tigetflag)
                 
                 
@@ -98,9 +82,10 @@ foreign import ccall tigetstr :: CString -> IO CString
 
 -- | Look up a string capability in the terminfo database.  
 --
--- Note: All terminfo strings should be printed with 'tPuts'.
-tiGetStr :: String -> Terminal -> IO (Maybe String)
-tiGetStr cap term = withCurTerm term $ do
+-- Note: Do not use this function for terminal output; use 'tiGetOutput'
+-- instead.
+tiGetStr :: String -> Terminal -> Maybe String
+tiGetStr cap term = unsafePerformIO $ withCurTerm term $ do
                 result <- withCString cap tigetstr 
                 if result == nullPtr || result == neg1Ptr
                     then return Nothing
@@ -126,25 +111,28 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
                 result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
                 peekCString result
 
-tiGetOutput :: String -> Terminal -> IO (Maybe 
-                ([Int] -> LinesAffected -> TermOutput))
-tiGetOutput cap term = do
-    mstr <- tiGetStr cap term
-    return $ flip fmap mstr $ \str ps la -> TermOutput $ do
+tiGetOutput :: String -> Terminal -> Maybe 
+                ([Int] -> LinesAffected -> TermOutput)
+tiGetOutput cap term = flip fmap (tiGetStr cap term) $ 
+    \str ps la -> TermOutput $ do
         outStr <- tParm str ps
         tPuts outStr la
 
+type CharOutput = CInt -> IO CInt
+foreign import ccall "wrapper" mkCallback :: CharOutput -> IO (FunPtr CharOutput)
+c_putChar = unsafePerformIO $ mkCallback putc
+    where
+        putc c = let c' = toEnum $ fromEnum c
+                 in putChar c' >> return c
 
-foreign import ccall tputs :: CString -> CInt -> FunPtr (CInt -> IO CInt) -> IO ()
-foreign import ccall "&" putchar :: FunPtr (CInt -> IO CInt)
+foreign import ccall tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
 
 type LinesAffected = Int
 
 -- | Output a string capability.  Applys padding information to the string if
 -- necessary.
 tPuts :: String -> LinesAffected -> IO ()
-tPuts s n = withCString s $ \c_str -> do
-                tputs c_str (toEnum n) putchar
+tPuts s n = withCString s $ \c_str -> tputs c_str (toEnum n) c_putChar
 
 newtype TermOutput = TermOutput (IO ())
 
