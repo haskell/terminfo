@@ -13,7 +13,10 @@ module System.Console.Terminfo.Base(
                             TermOutput(),
                             tiGetOutput,
                             runTermOutput,
-                            termOutput
+                            termOutput,
+                            tiGetOutput1,
+                            OutputCap,
+                            module Data.Monoid
                             ) where
 
 
@@ -127,6 +130,9 @@ c_putChar = unsafePerformIO $ mkCallback putc
 
 foreign import ccall tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
 
+-- | A parameter to specify the number of lines affected.  Some terminals use
+-- this parameter to compute variable-length padding for certain capabilities 
+-- (e.g., @clear@ and @dch1@).
 type LinesAffected = Int
 
 -- | Output a string capability.  Applys padding information to the string if
@@ -145,3 +151,21 @@ termOutput = TermOutput . putStr
 instance Monoid TermOutput where 
     mempty = TermOutput $ return ()
     TermOutput f `mappend` TermOutput g = TermOutput (f >> g) 
+
+-- | A type class to encapsulate capabilities which take in a number of
+-- parameters (for example, @Int -> Int -> Terminfo@).
+class OutputCap f where
+    outputCap :: ([Int] -> TermOutput) -> [Int] -> f
+
+instance OutputCap TermOutput where
+    outputCap f xs = f (reverse xs)
+
+instance (Enum a, OutputCap f) => OutputCap (a -> f) where
+    outputCap f xs = \x -> outputCap f (fromEnum x:xs)
+
+-- | Look up a capability which takes a certain number of parameters.
+-- 
+-- This should not be used for capabilities which may contain variable-length
+-- padding; for those, use 'tiGetOutput' instead.
+tiGetOutput1 :: OutputCap f => String -> Terminal -> Maybe f
+tiGetOutput1 str = fmap (\f -> outputCap (flip f 1) []) . tiGetOutput str

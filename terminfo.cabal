@@ -13,4 +13,6 @@ Build-depends:  base>=1.0
 extra-libraries:curses
 Extensions:     ForeignFunctionInterface
 Exposed-Modules:
+                System.Console.Terminfo
                 System.Console.Terminfo.Base
+                System.Console.Terminfo.Keys
