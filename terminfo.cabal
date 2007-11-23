@@ -15,5 +15,6 @@ Extensions:     ForeignFunctionInterface
 Exposed-Modules:
                 System.Console.Terminfo
                 System.Console.Terminfo.Base
-                System.Console.Terminfo.Keys
                 System.Console.Terminfo.Cursor
+                System.Console.Terminfo.Edit
+                System.Console.Terminfo.Keys
