@@ -2,5 +2,5 @@
 
 \begin{code}
 import Distribution.Simple
-main = defaultMainWithHooks defaultUserHooks
+main = defaultMain
 \end{code}
