@@ -16,3 +16,4 @@ Exposed-Modules:
                 System.Console.Terminfo
                 System.Console.Terminfo.Base
                 System.Console.Terminfo.Keys
+                System.Console.Terminfo.Cursor
