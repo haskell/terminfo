@@ -150,9 +150,9 @@ c_putChar = unsafePerformIO $ mkCallback putc
 
 foreign import ccall tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
 
--- | A parameter to specify the number of lines affected.  Some terminals use
--- this parameter to compute variable-length padding for certain capabilities 
--- (e.g., @clear@ and @dch1@).
+-- | A parameter to specify the number of lines affected.  Some capabilities
+-- (e.g., @clear@ and @dch1@) use
+-- this parameter on some terminals to compute variable-length padding.
 type LinesAffected = Int
 
 -- | Output a string capability.  Applys padding information to the string if
@@ -172,8 +172,8 @@ instance Monoid TermOutput where
     mempty = TermOutput $ return ()
     TermOutput f `mappend` TermOutput g = TermOutput (f >> g) 
 
--- | A type class to encapsulate capabilities which take in a number of
--- parameters (for example, @Int -> Int -> Terminfo@).
+-- | A type class to encapsulate capabilities which take in zero or more 
+-- parameters.
 class OutputCap f where
     outputCap :: ([Int] -> TermOutput) -> [Int] -> f
 
@@ -183,9 +183,10 @@ instance OutputCap TermOutput where
 instance (Enum a, OutputCap f) => OutputCap (a -> f) where
     outputCap f xs = \x -> outputCap f (fromEnum x:xs)
 
--- | Look up a capability which takes a certain number of parameters.
+-- | Look up a capability which takes a fixed number of parameters
+-- (for example, @Int -> Int -> Terminfo@).
 -- 
--- This should not be used for capabilities which may contain variable-length
--- padding; for those, use 'tiGetOutput' instead.
+-- For capabilities which may contain variable-length
+-- padding, use 'tiGetOutput' instead.
 tiGetOutput1 :: OutputCap f => String -> Capability f
 tiGetOutput1 str = fmap (\f -> outputCap (flip f 1) []) $ tiGetOutput str
