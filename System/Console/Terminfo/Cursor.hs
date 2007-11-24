@@ -18,10 +18,19 @@ cursorLeft = tiGetOutput1 "cub"
 cursorRight = tiGetOutput1 "cuf"
 cursorUp = tiGetOutput1 "cuu"
 
-cursorHome, cursorToLL, carriageReturn :: Terminal -> Maybe TermOutput
+cursorHome, cursorToLL :: Terminal -> Maybe TermOutput
 cursorHome = tiGetOutput1 "home"
 cursorToLL = tiGetOutput1 "ll"
+-- | The @cr@ capability, which moves the cursor to the first column of the
+-- current line.
+carriageReturn :: Terminal -> Maybe TermOutput
 carriageReturn = tiGetOutput1 "cr"
+
+-- | The @nel@ capability, which moves the cursor to the first column of
+-- the next line.  It behaves like a carriage return followed by a line feed.
+newline :: Terminal -> Maybe TermOutput
+newline = tiGetOutput1 "nel"
+
 
 data Point = Point {row, col :: Int}
 
