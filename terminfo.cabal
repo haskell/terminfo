@@ -17,4 +17,5 @@ Exposed-Modules:
                 System.Console.Terminfo.Base
                 System.Console.Terminfo.Cursor
                 System.Console.Terminfo.Edit
+                System.Console.Terminfo.Effects
                 System.Console.Terminfo.Keys
