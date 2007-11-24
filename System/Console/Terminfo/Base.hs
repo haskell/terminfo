@@ -6,6 +6,7 @@ module System.Console.Terminfo.Base(
                             Terminal(),
                             setupTerm,
                             setupTermFromEnv,
+                            Capability,
                             tiGetFlag,
                             tiGetNum,
                             tiGetStr,
@@ -20,7 +21,7 @@ module System.Console.Terminfo.Base(
                             ) where
 
 
-import Control.Monad (when)
+import Control.Monad
 import Data.Monoid
 import Foreign.C
 import Foreign.ForeignPtr
@@ -63,12 +64,31 @@ setupTermFromEnv = do
 withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withForeignPtr term set_curterm >> f
 
+-- | A feature or operation of a given 'Terminal'.
+newtype Capability a = Capability (Terminal -> Maybe a)
+
+runCapability :: Terminal -> Capability a -> Maybe a
+runCapability term (Capability f) = f term
+
+-- Note that the instances for Capability of Functor, Monad and MonadPlus 
+-- use the corresponding instances for Maybe.
+instance Functor Capability where
+    fmap f (Capability g) = Capability (fmap f . g) 
+
+instance Monad Capability where
+    return x = Capability (\_ -> Just x)
+    Capability f >>= g = Capability $ \t -> f t >>= runCapability t . g
+    Capability f >> Capability g = Capability $ \t -> f t >> g t
+
+instance MonadPlus Capability where
+    mzero = Capability (\_ -> Nothing)
+    Capability f `mplus` Capability g = Capability (\t -> f t `mplus` g t)
 
 foreign import ccall tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
-tiGetNum :: String -> Terminal -> Maybe Int
-tiGetNum cap term = unsafePerformIO $ withCurTerm term $ do
+tiGetNum :: String -> Capability Int 
+tiGetNum cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
                 n <- fmap fromEnum (withCString cap tigetnum)
                 if n >= 0
                     then return (Just n)
@@ -76,9 +96,10 @@ tiGetNum cap term = unsafePerformIO $ withCurTerm term $ do
 
 foreign import ccall tigetflag :: CString -> IO CInt
 -- | Look up a boolean capability in the terminfo database.
-tiGetFlag :: String -> Terminal -> Bool
-tiGetFlag cap term = unsafePerformIO $ withCurTerm term $ 
-                fmap (>0) (withCString cap tigetflag)
+tiGetFlag :: String -> Capability Bool
+tiGetFlag cap = Capability $ \term -> 
+                    Just $ unsafePerformIO $ withCurTerm term $ 
+                        fmap (>0) (withCString cap tigetflag)
                 
                 
 foreign import ccall tigetstr :: CString -> IO CString
@@ -87,8 +108,8 @@ foreign import ccall tigetstr :: CString -> IO CString
 --
 -- Note: Do not use this function for terminal output; use 'tiGetOutput'
 -- instead.
-tiGetStr :: String -> Terminal -> Maybe String
-tiGetStr cap term = unsafePerformIO $ withCurTerm term $ do
+tiGetStr :: String -> Capability String
+tiGetStr cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
                 result <- withCString cap tigetstr 
                 if result == nullPtr || result == neg1Ptr
                     then return Nothing
@@ -114,9 +135,8 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
                 result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
                 peekCString result
 
-tiGetOutput :: String -> Terminal -> Maybe 
-                ([Int] -> LinesAffected -> TermOutput)
-tiGetOutput cap term = flip fmap (tiGetStr cap term) $ 
+tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
+tiGetOutput cap = flip fmap (tiGetStr cap) $ 
     \str ps la -> TermOutput $ do
         outStr <- tParm str ps
         tPuts outStr la
@@ -167,5 +187,5 @@ instance (Enum a, OutputCap f) => OutputCap (a -> f) where
 -- 
 -- This should not be used for capabilities which may contain variable-length
 -- padding; for those, use 'tiGetOutput' instead.
-tiGetOutput1 :: OutputCap f => String -> Terminal -> Maybe f
-tiGetOutput1 str = fmap (\f -> outputCap (flip f 1) []) . tiGetOutput str
+tiGetOutput1 :: OutputCap f => String -> Capability f
+tiGetOutput1 str = fmap (\f -> outputCap (flip f 1) []) $ tiGetOutput str

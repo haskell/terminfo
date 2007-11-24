@@ -20,16 +20,12 @@ module System.Console.Terminfo.Keys(
                     ) where
 
 import System.Console.Terminfo.Base
-import Data.Maybe
 
-keypadOn, keypadOff :: Terminal -> TermOutput
-keypadOn = orDoNothing . tiGetOutput1 "smkx"
-keypadOff = orDoNothing . tiGetOutput1 "rmkx"
+keypadOn, keypadOff :: Capability TermOutput
+keypadOn = tiGetOutput1 "smkx"
+keypadOff = tiGetOutput1 "rmkx"
 
-orDoNothing :: Monoid a => Maybe a -> a
-orDoNothing = fromMaybe mempty
-
-keyUp, keyDown, keyLeft, keyRight :: Terminal -> Maybe String
+keyUp, keyDown, keyLeft, keyRight :: Capability String
 keyUp = tiGetStr "kcuu1"
 keyDown = tiGetStr "kcud1"
 keyLeft = tiGetStr "kcub1"
@@ -37,6 +33,6 @@ keyRight = tiGetStr "kcur1"
 
 -- | Look up the control sequence for a given function sequence.  For example, 
 -- @functionKey 12@ retrieves the @kf12@ capability.
-functionKey :: Int -> Terminal -> Maybe String
+functionKey :: Int -> Capability String
 functionKey n = tiGetStr ("kf" ++ show n)
 
