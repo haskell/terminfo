@@ -12,11 +12,11 @@ module System.Console.Terminfo.Base(
                             tiGuardFlag,
                             tiGetNum,
                             tiGetStr,
-                            LinesAffected,
                             TermOutput(),
-                            tiGetOutput,
                             runTermOutput,
-                            termOutput,
+                            termText,
+                            tiGetOutput,
+                            LinesAffected,
                             tiGetOutput1,
                             OutputCap,
                             module Data.Monoid
@@ -145,6 +145,7 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
                 result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
                 peekCString result
 
+-- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
 tiGetOutput cap = flip fmap (tiGetStr cap) $ 
     \str ps la -> TermOutput $ do
@@ -170,13 +171,17 @@ type LinesAffected = Int
 tPuts :: String -> LinesAffected -> IO ()
 tPuts s n = withCString s $ \c_str -> tputs c_str (toEnum n) c_putChar
 
+-- | An action which sends output to the terminal.  That output may mix plain text with control
+-- characters and escape sequences, along with delays (called \"padding\") required by some older
+-- terminals.
 newtype TermOutput = TermOutput (IO ())
 
 runTermOutput :: Terminal -> TermOutput -> IO ()
 runTermOutput term (TermOutput to) = withCurTerm term to
 
-termOutput :: String -> TermOutput
-termOutput = TermOutput . putStr
+-- | Output plain text containing no control characters or escape sequences.
+termText :: String -> TermOutput
+termText = TermOutput . putStr
 
 instance Monoid TermOutput where 
     mempty = TermOutput $ return ()
@@ -193,8 +198,8 @@ instance OutputCap TermOutput where
 instance (Enum a, OutputCap f) => OutputCap (a -> f) where
     outputCap f xs = \x -> outputCap f (fromEnum x:xs)
 
--- | Look up a capability which takes a fixed number of parameters
--- (for example, @Int -> Int -> Terminfo@).
+-- | Look up an output capability which takes a fixed number of parameters
+-- (for example, @Int -> Int -> TermOutput@).
 -- 
 -- For capabilities which may contain variable-length
 -- padding, use 'tiGetOutput' instead.
