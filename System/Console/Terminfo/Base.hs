@@ -7,6 +7,7 @@ module System.Console.Terminfo.Base(
                             setupTerm,
                             setupTermFromEnv,
                             Capability,
+                            getCapability,
                             tiGetFlag,
                             tiGuardFlag,
                             tiGetNum,
@@ -68,8 +69,8 @@ withCurTerm (Terminal term) f = withForeignPtr term set_curterm >> f
 -- | A feature or operation of a given 'Terminal'.
 newtype Capability a = Capability (Terminal -> Maybe a)
 
-runCapability :: Terminal -> Capability a -> Maybe a
-runCapability term (Capability f) = f term
+getCapability :: Terminal -> Capability a -> Maybe a
+getCapability term (Capability f) = f term
 
 -- Note that the instances for Capability of Functor, Monad and MonadPlus 
 -- use the corresponding instances for Maybe.
@@ -78,7 +79,7 @@ instance Functor Capability where
 
 instance Monad Capability where
     return x = Capability (\_ -> Just x)
-    Capability f >>= g = Capability $ \t -> f t >>= runCapability t . g
+    Capability f >>= g = Capability $ \t -> f t >>= getCapability t . g
     Capability f >> Capability g = Capability $ \t -> f t >> g t
 
 instance MonadPlus Capability where
