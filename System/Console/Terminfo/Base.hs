@@ -8,6 +8,7 @@ module System.Console.Terminfo.Base(
                             setupTermFromEnv,
                             Capability,
                             tiGetFlag,
+                            tiGuardFlag,
                             tiGetNum,
                             tiGetStr,
                             LinesAffected,
@@ -95,12 +96,20 @@ tiGetNum cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
                     else return Nothing
 
 foreign import ccall tigetflag :: CString -> IO CInt
--- | Look up a boolean capability in the terminfo database.
+-- | Look up a boolean capability in the terminfo database.  
+-- 
+-- Unlike 'tiGuardFlag', this capability never fails; it returns 'False' if the
+-- capability is absent or set to false, and returns 'True' otherwise.  
+-- 
 tiGetFlag :: String -> Capability Bool
 tiGetFlag cap = Capability $ \term -> 
                     Just $ unsafePerformIO $ withCurTerm term $ 
                         fmap (>0) (withCString cap tigetflag)
                 
+-- | Look up a boolean capability in the terminfo database, and fail if
+-- it\'s not defined.
+tiGuardFlag :: String -> Capability ()
+tiGuardFlag cap = tiGetFlag cap >>= guard
                 
 foreign import ccall tigetstr :: CString -> IO CString
 
