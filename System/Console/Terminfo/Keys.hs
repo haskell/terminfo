@@ -29,7 +29,7 @@ keyUp, keyDown, keyLeft, keyRight :: Capability String
 keyUp = tiGetStr "kcuu1"
 keyDown = tiGetStr "kcud1"
 keyLeft = tiGetStr "kcub1"
-keyRight = tiGetStr "kcur1"
+keyRight = tiGetStr "kcuf1"
 
 -- | Look up the control sequence for a given function sequence.  For example, 
 -- @functionKey 12@ retrieves the @kf12@ capability.
