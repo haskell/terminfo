@@ -16,7 +16,9 @@ module System.Console.Terminfo.Keys(
                     keyLeft,
                     keyRight,
                     -- * Miscellaneous
-                    functionKey
+                    functionKey,
+                    keyBackspace,
+                    keyDeleteChar
                     ) where
 
 import System.Console.Terminfo.Base
@@ -36,3 +38,6 @@ keyRight = tiGetStr "kcuf1"
 functionKey :: Int -> Capability String
 functionKey n = tiGetStr ("kf" ++ show n)
 
+keyBackspace, keyDeleteChar :: Capability String
+keyBackspace = tiGetStr "kbs"
+keyDeleteChar = tiGetStr "kdch1"
