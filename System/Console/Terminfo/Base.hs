@@ -47,13 +47,20 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 --
 setupTerm :: String -> IO Terminal
 setupTerm term = withCString term $ \c_term -> 
+    {-- If the terminal name is the same as for the previous call to 
+    setupterm, ncurses will return cur_term instead of a new struct.
+    Thus, it's not safe to free the terminal without doing some bookkeeping.  
+    For now, let's just accept a small space leak (which will be mitigated
+    anyway by that sharing behavior).
+    --}
                     with 0 $ \ret_ptr -> do
                         let stdOutput = 1
                         setupterm c_term stdOutput ret_ptr
                         ret <- peek ret_ptr
                         when (ret /= 1) $ error ("Couldn't lookup terminfo entry " ++ show term)
                         cterm <- peek cur_term
-                        fmap Terminal $ newForeignPtr del_curterm cterm
+                        -- fmap Terminal $ newForeignPtr del_curterm cterm
+                        fmap Terminal $ newForeignPtr_ cterm
                             
 -- | Initialize the terminfo library, using the @TERM@ environmental variable.
 -- If @TERM@ is not set, we use the generic, minimal entry @dumb@.
