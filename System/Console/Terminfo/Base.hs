@@ -29,7 +29,7 @@ import Foreign.C
 import Foreign.ForeignPtr
 import Foreign.Ptr
 import Foreign.Marshal
-import Foreign.Storable (peek)
+import Foreign.Storable (peek,poke)
 import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -49,18 +49,24 @@ setupTerm :: String -> IO Terminal
 setupTerm term = withCString term $ \c_term -> 
     {-- If the terminal name is the same as for the previous call to 
     setupterm, ncurses will return cur_term instead of a new struct.
-    Thus, it's not safe to free the terminal without doing some bookkeeping.  
-    For now, let's just accept a small space leak (which will be mitigated
-    anyway by that sharing behavior).
+    This leads to problems when calling del_curterm on a struct shared by
+    more than one Terminal.  To avoid this behavior, we temporarily set the
+    cur_term value to nullPtr.
     --}
                     with 0 $ \ret_ptr -> do
                         let stdOutput = 1
+                        -- set cur_term to null, temporarily
+                        old_term <- peek cur_term
+                        poke cur_term nullPtr
+                        -- call setupterm and check the return value.
                         setupterm c_term stdOutput ret_ptr
                         ret <- peek ret_ptr
                         when (ret /= 1) $ error ("Couldn't lookup terminfo entry " ++ show term)
+                        -- set cur_term to its previous value
                         cterm <- peek cur_term
-                        -- fmap Terminal $ newForeignPtr del_curterm cterm
-                        fmap Terminal $ newForeignPtr_ cterm
+                        poke cur_term old_term 
+                        -- create the Terminal and return it.
+                        fmap Terminal $ newForeignPtr del_curterm cterm
                             
 -- | Initialize the terminfo library, using the @TERM@ environmental variable.
 -- If @TERM@ is not set, we use the generic, minimal entry @dumb@.
