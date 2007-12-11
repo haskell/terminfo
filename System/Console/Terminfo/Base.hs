@@ -79,7 +79,7 @@ setupTermFromEnv = do
 withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withForeignPtr term set_curterm >> f
 
--- | A feature or operation of a given 'Terminal'.
+-- | A feature or operation which a 'Terminal' may define.
 newtype Capability a = Capability (Terminal -> Maybe a)
 
 getCapability :: Terminal -> Capability a -> Maybe a
