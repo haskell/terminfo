@@ -1,11 +1,47 @@
-module System.Console.Terminfo.Cursor where
+{- | This module provides capabilities for moving the cursor on the terminal. -}
+module System.Console.Terminfo.Cursor(
+                        -- * Terminal dimensions
+                        -- | Get the default size of the terminal.  For
+                        -- resizeable terminals (e.g., @xterm@), these may not
+                        -- correspond to the actual dimensions.
+                        termLines, termColumns,
+                        -- * Scrolling
+                        carriageReturn,
+                        newline,
+                        scrollForward,
+                        scrollReverse,
+                        -- * Relative cursor movements
+                        -- | The following functions for cursor movement will
+                        -- combine the more primitive capabilities.  For example,
+                        -- 'moveDown' may use either 'cursorDown' or
+                        -- 'cursorDown1' depending on the parameter and which of
+                        -- @cud@ and @cud1@ are defined.
+                        moveDown, moveLeft, moveRight, moveUp,
+                        
+                        -- ** Primitive movement capabilities
+                        -- | These capabilities correspond directly to @cub@, @cud@,
+                        -- @cub1@, @cud1@, etc.
+                        cursorDown1, 
+                        cursorLeft1,
+                        cursorRight1,
+                        cursorUp1, 
+                        cursorDown, 
+                        cursorLeft,
+                        cursorRight,
+                        cursorUp, 
+                        -- * Absolute cursor movements
+                        cursorAddress,
+                        Point(..),
+                        rowAddress,
+                        columnAddress
+                        ) where
 
 import System.Console.Terminfo.Base
 import Control.Monad
 
-lines, columns :: Capability Int
-lines = tiGetNum "lines"
-columns = tiGetNum "columns"
+termLines, termColumns :: Capability Int
+termLines = tiGetNum "lines"
+termColumns = tiGetNum "columns"
 
 {--
 On many terminals, the @cud1@ ('cursorDown1') capability is the line feed 
@@ -38,6 +74,30 @@ cursorUp = tiGetOutput1 "cuu"
 cursorHome, cursorToLL :: Capability TermOutput
 cursorHome = tiGetOutput1 "home"
 cursorToLL = tiGetOutput1 "ll"
+
+
+-- Movements are built out of parametrized and unparam'd movement
+-- capabilities.
+-- todo: more complicated logic like ncurses does.
+move single param = let
+        tryBoth = do
+                    s <- single
+                    p <- param
+                    return $ \n -> case n of
+                        0 -> mempty
+                        1 -> s
+                        n -> p n
+        manySingle = do
+                        s <- single
+                        return $ \n -> mconcat $ replicate n s
+        in tryBoth `mplus` param `mplus` manySingle
+
+moveLeft, moveRight, moveUp, moveDown :: Capability (Int -> TermOutput)
+moveLeft = move cursorLeft1 cursorLeft
+moveRight = move cursorRight1 cursorRight
+moveUp = move cursorUp1 cursorUp
+moveDown = cursorDown -- see notes on @cud1@ above
+
 -- | The @cr@ capability, which moves the cursor to the first column of the
 -- current line.
 carriageReturn :: Capability TermOutput
