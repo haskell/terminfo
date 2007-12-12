@@ -1,13 +1,18 @@
 Name:           terminfo
 Cabal-Version:  >=1.1.4
-Version:        0.0
+Version:        0.1
+Category:       User Interfaces
 License:        BSD3
 License-File:   LICENSE
 Copyright:      (c) Judah Jacobson
 Author:         Judah Jacobson
 Maintainer:     Judah Jacobson <judah.jacobson@gmail.com>
 Category:       User Interfaces
-Synopsis:       Haskell interface to the terminfo library.
+Synopsis:       Haskell bindings to the terminfo library.
+Description:    This library provides an interface to the terminfo database (via bindings to the
+                curses library).  Terminfo allows programs to interact with a variety of terminals 
+                using a standard set of capabilities.  
+
 Stability:      Experimental
 Build-depends:  base>=1.0
 extra-libraries:curses
