@@ -12,7 +12,7 @@ Synopsis:       Haskell bindings to the terminfo library.
 Description:    This library provides an interface to the terminfo database (via bindings to the
                 curses library).  Terminfo allows programs to interact with a variety of terminals 
                 using a standard set of capabilities.  
-
+Homepage:       http://code.haskell.org/terminfo
 Stability:      Experimental
 Build-depends:  base>=1.0
 extra-libraries:curses
