@@ -1,7 +1,13 @@
--- | This module provides a low-level interface to the C functions of the 
+-- |
+-- Maintainer  : judah.jacobson@gmail.com
+-- Stability   : experimental
+-- Portability : portable (FFI)
+--
+-- This module provides a low-level interface to the C functions of the 
 -- terminfo library. 
 -- 
 -- NOTE: Since this library is built on top of the curses interface, it is not thread-safe.
+
 module System.Console.Terminfo.Base(
                             Terminal(),
                             setupTerm,

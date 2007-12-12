@@ -1,3 +1,8 @@
+{- |
+Maintainer  : judah.jacobson@gmail.com
+Stability   : experimental
+Portability : portable (FFI)
+-}
 module System.Console.Terminfo(
     module System.Console.Terminfo.Base,
     module System.Console.Terminfo.Keys,

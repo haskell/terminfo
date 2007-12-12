@@ -1,3 +1,7 @@
+-- |
+-- Maintainer  : judah.jacobson@gmail.com
+-- Stability   : experimental
+-- Portability : portable (FFI)
 module System.Console.Terminfo.Edit where
 
 import System.Console.Terminfo.Base

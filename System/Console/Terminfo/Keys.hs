@@ -1,6 +1,10 @@
-{-| The string parameters in this module are the character sequences
-corresponding to user input such as arrow keys and function keys.
--}
+-- |
+-- Maintainer  : judah.jacobson@gmail.com
+-- Stability   : experimental
+-- Portability : portable (FFI)
+--
+-- The string capabilities in this module are the character sequences
+-- corresponding to user input such as arrow keys and function keys.
 module System.Console.Terminfo.Keys(
                     -- * The keypad
                     -- | The following commands
