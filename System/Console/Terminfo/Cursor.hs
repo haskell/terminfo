@@ -85,14 +85,17 @@ Looking at the source code of curses (lib_mvcur.c) and other similar programs,
 they use @cud@ instead of @cud1@ if it's '\n' and ONLCR is turned on.  
 
 Since there's no easy way to check for ONLCR at this point, I've just made
-cursorDown1 always use @cud@.
-
-Note the same problems apply to @ind@, but I think there's less of an
-expectation that scrolling down will keep the same column.  
+moveDown only use cud1 if it's not '\n'.
 Suggestions are welcome.
 --}
+cursorDown1Fixed :: Capability TermOutput
+cursorDown1Fixed = do
+    str <- tiGetStr "cud1"
+    guard (str /= "\n")
+    tiGetOutput1 "cud1"
+
 cursorDown1, cursorLeft1,cursorRight1,cursorUp1 :: Capability TermOutput
-cursorDown1 = fmap ($1) cursorDown
+cursorDown1 = tiGetOutput1 "cud1"
 cursorLeft1 = tiGetOutput1 "cub1"
 cursorRight1 = tiGetOutput1 "cuf1"
 cursorUp1 = tiGetOutput1 "cuu1"
@@ -128,7 +131,7 @@ moveLeft, moveRight, moveUp, moveDown :: Capability (Int -> TermOutput)
 moveLeft = move cursorLeft1 cursorLeft
 moveRight = move cursorRight1 cursorRight
 moveUp = move cursorUp1 cursorUp
-moveDown = cursorDown -- see notes on @cud1@ above
+moveDown = move cursorDown1Fixed cursorDown
 
 -- | The @cr@ capability, which moves the cursor to the first column of the
 -- current line.
