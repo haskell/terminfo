@@ -10,6 +10,10 @@ module System.Console.Terminfo.Cursor(
                         -- resizeable terminals (e.g., @xterm@), these may not
                         -- correspond to the actual dimensions.
                         termLines, termColumns,
+                        -- * Cursor flags
+                        autoRightMargin,
+                        autoLeftMargin,
+                        wraparoundGlitch,
                         -- * Scrolling
                         carriageReturn,
                         newline,
@@ -47,6 +51,29 @@ import Control.Monad
 termLines, termColumns :: Capability Int
 termLines = tiGetNum "lines"
 termColumns = tiGetNum "columns"
+
+-- | This flag specifies that the cursor wraps automatically from the last 
+-- column of one line to the first column of the next.
+autoRightMargin :: Capability Bool
+autoRightMargin = tiGetFlag "am"
+
+-- | This flag specifies that a backspace at column 0 wraps the cursor to
+-- the last column of the previous line.
+autoLeftMargin :: Capability Bool
+autoLeftMargin = tiGetFlag "bw"
+
+-- | This flag specifies that the terminal does not perform
+-- 'autoRightMargin'-style wrapping when the character which would cause the 
+-- wraparound is a control character.
+-- This is also known as the \"newline glitch\" or \"magic wrap\".  
+-- 
+-- For example, in an 80-column terminal with this behavior, the following 
+-- will print single-spaced instead of double-spaced:
+-- 
+-- > replicateM_ 5 $ putStr $ replicate 80 'x' ++ "\n"
+-- 
+wraparoundGlitch :: Capability Bool
+wraparoundGlitch = tiGetFlag "xenl"
 
 {--
 On many terminals, the @cud1@ ('cursorDown1') capability is the line feed 
