@@ -43,11 +43,11 @@ import System.IO.Unsafe (unsafePerformIO)
 data TERMINAL = TERMINAL
 newtype Terminal = Terminal (ForeignPtr TERMINAL)
 
-foreign import ccall "&" cur_term :: Ptr (Ptr TERMINAL)
-foreign import ccall set_curterm :: Ptr TERMINAL -> IO (Ptr TERMINAL)
-foreign import ccall "&" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
+foreign import ccall "term.h &cur_term" cur_term :: Ptr (Ptr TERMINAL)
+foreign import ccall "term.h set_curterm" set_curterm :: Ptr TERMINAL -> IO (Ptr TERMINAL)
+foreign import ccall "term.h &del_curterm" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
 
-foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
+foreign import ccall "term.h setupterm" setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 
 -- | Initialize the terminfo library to the given terminal entry.
 --
@@ -105,7 +105,7 @@ instance MonadPlus Capability where
     mzero = Capability (\_ -> Nothing)
     Capability f `mplus` Capability g = Capability (\t -> f t `mplus` g t)
 
-foreign import ccall tigetnum :: CString -> IO CInt
+foreign import ccall "term.h tigetnum" tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
 tiGetNum :: String -> Capability Int 
@@ -115,7 +115,7 @@ tiGetNum cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
                     then return (Just n)
                     else return Nothing
 
-foreign import ccall tigetflag :: CString -> IO CInt
+foreign import ccall "term.h tigetflag" tigetflag :: CString -> IO CInt
 -- | Look up a boolean capability in the terminfo database.  
 -- 
 -- Unlike 'tiGuardFlag', this capability never fails; it returns 'False' if the
@@ -131,7 +131,7 @@ tiGetFlag cap = Capability $ \term ->
 tiGuardFlag :: String -> Capability ()
 tiGuardFlag cap = tiGetFlag cap >>= guard
                 
-foreign import ccall tigetstr :: CString -> IO CString
+foreign import ccall "term.h tigetstr" tigetstr :: CString -> IO CString
 
 -- | Look up a string capability in the terminfo database.  
 --
@@ -147,7 +147,7 @@ tiGetStr cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
         -- hack; tigetstr sometimes returns (-1)
         neg1Ptr = nullPtr `plusPtr` (-1)
                     
-foreign import ccall tparm ::
+foreign import ccall "term.h tparm" tparm ::
     CString -> CLong -> CLong -> CLong -> CLong -> CLong -> CLong 
     -> CLong -> CLong -> CLong -- p1,...,p9
     -> IO CString
@@ -178,7 +178,7 @@ c_putChar = unsafePerformIO $ mkCallback putc
         putc c = let c' = toEnum $ fromEnum c
                  in putChar c' >> return c
 
-foreign import ccall tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
+foreign import ccall "term.h tputs" tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
 
 -- | A parameter to specify the number of lines affected.  Some capabilities
 -- (e.g., @clear@ and @dch1@) use
