@@ -11,7 +11,7 @@ wrapWith :: Capability TermOutput -> Capability TermOutput
 wrapWith start end = do
     s <- start
     e <- end
-    return (\t -> s `mappend` t `mappend` e)
+    return (\t -> s <#> t <#> e)
 
 withStandout, withUnderline :: Capability (TermOutput -> TermOutput)
 withStandout = wrapWith enterStandoutMode exitStandoutMode

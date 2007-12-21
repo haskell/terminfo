@@ -26,7 +26,9 @@ module System.Console.Terminfo.Base(
                             LinesAffected,
                             tiGetOutput1,
                             OutputCap,
-                            module Data.Monoid
+                            -- ** Monoid functions
+                            Monoid(..),
+                            (<#>)
                             ) where
 
 
@@ -225,3 +227,10 @@ instance (Enum a, OutputCap f) => OutputCap (a -> f) where
 -- padding, use 'tiGetOutput' instead.
 tiGetOutput1 :: OutputCap f => String -> Capability f
 tiGetOutput1 str = fmap (\f -> outputCap (flip f 1) []) $ tiGetOutput str
+
+infixl 2 <#>
+
+-- | An operator version of 'mappend'.
+(<#>) :: Monoid m => m -> m -> m
+(<#>) = mappend
+
