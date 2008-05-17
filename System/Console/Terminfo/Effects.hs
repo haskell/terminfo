@@ -2,7 +2,16 @@
 -- Maintainer  : judah.jacobson@gmail.com
 -- Stability   : experimental
 -- Portability : portable (FFI)
-module System.Console.Terminfo.Effects where
+module System.Console.Terminfo.Effects(
+                    -- * Bell alerts
+                    bell,visualBell,
+                    -- * text effects
+                    withStandout,withUnderline,
+                    enterStandoutMode,
+                    exitStandoutMode,
+                    enterUnderlineMode,
+                    exitUnderlineMode
+                    ) where
 
 import System.Console.Terminfo.Base
 
@@ -26,4 +35,6 @@ enterUnderlineMode = tiGetOutput1 "smul"
 exitUnderlineMode = tiGetOutput1 "rmul"
 
 
-
+bell, visualBell :: Capability TermOutput
+bell = tiGetOutput1 "bel"
+visualBell = tiGetOutput1 "flash"
