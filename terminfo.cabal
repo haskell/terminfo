@@ -14,6 +14,7 @@ Description:    This library provides an interface to the terminfo database (via
                 using a standard set of capabilities.  
 Homepage:       http://code.haskell.org/terminfo
 Stability:      Experimental
+Build-type:     Simple
 Build-depends:  base>=1.0
 extra-libraries:curses
 Extensions:     ForeignFunctionInterface
