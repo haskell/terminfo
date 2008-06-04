@@ -14,9 +14,11 @@ Description:    This library provides an interface to the terminfo database (via
                 using a standard set of capabilities.  
 Homepage:       http://code.haskell.org/terminfo
 Stability:      Experimental
-Build-type:     Simple
+Build-type:     Configure
 Build-depends:  base>=1.0
 extra-libraries:curses
+extra-source-files: configure.ac configure terminfo.buildinfo.in
+extra-tmp-files: config.log config.status autom4te.cache terminfo.buildinfo
 Extensions:     ForeignFunctionInterface
 Exposed-Modules:
                 System.Console.Terminfo
