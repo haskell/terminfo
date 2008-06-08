@@ -3,7 +3,7 @@
 -- Stability   : experimental
 -- Portability : portable (FFI)
 --
--- | This module provides capabilities for moving the cursor on the terminal. -}
+-- This module provides capabilities for moving the cursor on the terminal.
 module System.Console.Terminfo.Cursor(
                         -- * Terminal dimensions
                         -- | Get the default size of the terminal.  For
