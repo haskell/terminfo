@@ -97,30 +97,37 @@ withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
             else f
 
 -- | A feature or operation which a 'Terminal' may define.
-newtype Capability a = Capability (Terminal -> Maybe a)
+newtype Capability a = Capability (IO (Maybe a))
 
 getCapability :: Terminal -> Capability a -> Maybe a
-getCapability term (Capability f) = f term
+getCapability term (Capability f) = unsafePerformIO $ withCurTerm term f
 
 -- Note that the instances for Capability of Functor, Monad and MonadPlus 
 -- use the corresponding instances for Maybe.
 instance Functor Capability where
-    fmap f (Capability g) = Capability (fmap f . g) 
+    fmap f (Capability g) = Capability (fmap (fmap f) g) 
 
 instance Monad Capability where
-    return x = Capability (\_ -> Just x)
-    Capability f >>= g = Capability $ \t -> f t >>= getCapability t . g
-    Capability f >> Capability g = Capability $ \t -> f t >> g t
+    return = Capability . return . Just
+    Capability f >>= g = Capability $ do
+        mx <- f
+        case mx of
+            Nothing -> return Nothing
+            Just x -> let Capability g' = g x in g'
 
 instance MonadPlus Capability where
-    mzero = Capability (\_ -> Nothing)
-    Capability f `mplus` Capability g = Capability (\t -> f t `mplus` g t)
+    mzero = Capability (return Nothing)
+    Capability f `mplus` Capability g = Capability $ do
+        mx <- f
+        case mx of
+            Nothing -> g
+            _ -> return mx
 
 foreign import ccall tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
 tiGetNum :: String -> Capability Int 
-tiGetNum cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
+tiGetNum cap = Capability $ do
                 n <- fmap fromEnum (withCString cap tigetnum)
                 if n >= 0
                     then return (Just n)
@@ -133,9 +140,8 @@ foreign import ccall tigetflag :: CString -> IO CInt
 -- capability is absent or set to false, and returns 'True' otherwise.  
 -- 
 tiGetFlag :: String -> Capability Bool
-tiGetFlag cap = Capability $ \term -> 
-                    Just $ unsafePerformIO $ withCurTerm term $ 
-                        fmap (>0) (withCString cap tigetflag)
+tiGetFlag cap = Capability $ fmap (Just . (>0)) $
+                        withCString cap tigetflag
                 
 -- | Look up a boolean capability in the terminfo database, and fail if
 -- it\'s not defined.
@@ -149,7 +155,7 @@ foreign import ccall tigetstr :: CString -> IO CString
 -- Note: Do not use this function for terminal output; use 'tiGetOutput'
 -- instead.
 tiGetStr :: String -> Capability String
-tiGetStr cap = Capability $ \term -> unsafePerformIO $ withCurTerm term $ do
+tiGetStr cap = Capability $ do
                 result <- withCString cap tigetstr 
                 if result == nullPtr || result == neg1Ptr
                     then return Nothing
@@ -178,16 +184,13 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
 -- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
 tiGetOutput cap = flip fmap (tiGetStr cap) $ 
-    \str ps la -> TermOutput $ do
+    \str ps la -> TermOutput $ \putc -> do
         outStr <- tParm str ps
-        tPuts outStr la
+        tPuts outStr la putc
 
 type CharOutput = CInt -> IO CInt
+
 foreign import ccall "wrapper" mkCallback :: CharOutput -> IO (FunPtr CharOutput)
-c_putChar = unsafePerformIO $ mkCallback putc
-    where
-        putc c = let c' = toEnum $ fromEnum c
-                 in putChar c' >> return c
 
 foreign import ccall tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
 
@@ -198,24 +201,30 @@ type LinesAffected = Int
 
 -- | Output a string capability.  Applys padding information to the string if
 -- necessary.
-tPuts :: String -> LinesAffected -> IO ()
-tPuts s n = withCString s $ \c_str -> tputs c_str (toEnum n) c_putChar
+tPuts :: String -> LinesAffected -> FunPtr CharOutput -> IO ()
+tPuts s n putc = withCString s $ \c_str -> tputs c_str (toEnum n) putc
 
 -- | An action which sends output to the terminal.  That output may mix plain text with control
 -- characters and escape sequences, along with delays (called \"padding\") required by some older
 -- terminals.
-newtype TermOutput = TermOutput (IO ())
+newtype TermOutput = TermOutput (FunPtr CharOutput -> IO ())
 
 runTermOutput :: Terminal -> TermOutput -> IO ()
-runTermOutput term (TermOutput to) = withCurTerm term to
+runTermOutput term (TermOutput to) = do
+    putc_ptr <- mkCallback putc
+    withCurTerm term (to putc_ptr)
+    freeHaskellFunPtr putc_ptr
+  where
+    putc c = let c' = toEnum $ fromEnum c
+             in putChar c' >> return c
 
 -- | Output plain text containing no control characters or escape sequences.
 termText :: String -> TermOutput
-termText = TermOutput . putStr
+termText str = TermOutput $ \_ -> putStr str
 
 instance Monoid TermOutput where 
-    mempty = TermOutput $ return ()
-    TermOutput f `mappend` TermOutput g = TermOutput (f >> g) 
+    mempty = TermOutput $ \_ -> return ()
+    TermOutput f `mappend` TermOutput g = TermOutput $ \putc -> f putc >> g putc 
 
 -- | A type class to encapsulate capabilities which take in zero or more 
 -- parameters.
