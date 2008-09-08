@@ -41,6 +41,7 @@ import Foreign.Marshal
 import Foreign.Storable (peek,poke)
 import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO (stdout, hFlush)
 
 
 data TERMINAL = TERMINAL
@@ -216,7 +217,7 @@ runTermOutput term (TermOutput to) = do
     freeHaskellFunPtr putc_ptr
   where
     putc c = let c' = toEnum $ fromEnum c
-             in putChar c' >> return c
+             in putChar c' >> hFlush stdout >> return c
 
 -- | Output plain text containing no control characters or escape sequences.
 termText :: String -> TermOutput
