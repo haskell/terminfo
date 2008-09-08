@@ -86,7 +86,15 @@ setupTermFromEnv = do
     setupTerm term
 
 withCurTerm :: Terminal -> IO a -> IO a
-withCurTerm (Terminal term) f = withForeignPtr term set_curterm >> f
+withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
+        old_term <- peek cur_term
+        if old_term /= cterm
+            then do
+                    set_curterm cterm
+                    x <- f
+                    set_curterm old_term
+                    return x
+            else f
 
 -- | A feature or operation which a 'Terminal' may define.
 newtype Capability a = Capability (Terminal -> Maybe a)
