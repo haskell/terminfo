@@ -21,6 +21,7 @@ module System.Console.Terminfo.Base(
                             tiGetStr,
                             TermOutput(),
                             runTermOutput,
+                            hRunTermOutput,
                             termText,
                             tiGetOutput,
                             LinesAffected,
@@ -41,7 +42,7 @@ import Foreign.Marshal
 import Foreign.Storable (peek,poke)
 import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
-import System.IO (stdout, hFlush)
+import System.IO
 
 
 data TERMINAL = TERMINAL
@@ -64,6 +65,9 @@ setupTerm term = withCString term $ \c_term ->
     cur_term value to nullPtr.
     --}
                     with 0 $ \ret_ptr -> do
+                        -- NOTE: I believe that for the way we use terminfo 
+                        -- (i.e. custom output function)
+                        -- this parameter does not affect anything.
                         let stdOutput = 1
                         -- set cur_term to null, temporarily
                         old_term <- peek cur_term
@@ -185,7 +189,7 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
 -- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
 tiGetOutput cap = flip fmap (tiGetStr cap) $ 
-    \str ps la -> TermOutput $ \putc -> do
+    \str ps la -> TermOutput $ \_ putc -> do
         outStr <- tParm str ps
         tPuts outStr la putc
 
@@ -208,24 +212,30 @@ tPuts s n putc = withCString s $ \c_str -> tputs c_str (toEnum n) putc
 -- | An action which sends output to the terminal.  That output may mix plain text with control
 -- characters and escape sequences, along with delays (called \"padding\") required by some older
 -- terminals.
-newtype TermOutput = TermOutput (FunPtr CharOutput -> IO ())
+newtype TermOutput = TermOutput (Handle -> FunPtr CharOutput -> IO ())
 
+-- | Write the terminal output to the standard output device.
 runTermOutput :: Terminal -> TermOutput -> IO ()
-runTermOutput term (TermOutput to) = do
+runTermOutput = hRunTermOutput stdout
+
+-- | Write the terminal output to the terminal or file managed by the given
+-- 'Handle'.
+hRunTermOutput :: Handle -> Terminal -> TermOutput -> IO ()
+hRunTermOutput h term (TermOutput to) = do
     putc_ptr <- mkCallback putc
-    withCurTerm term (to putc_ptr)
+    withCurTerm term (to h putc_ptr)
     freeHaskellFunPtr putc_ptr
   where
     putc c = let c' = toEnum $ fromEnum c
-             in putChar c' >> hFlush stdout >> return c
+             in hPutChar h c' >> hFlush h >> return c
 
 -- | Output plain text containing no control characters or escape sequences.
 termText :: String -> TermOutput
-termText str = TermOutput $ \_ -> putStr str
+termText str = TermOutput $ \h _ -> hPutStr h str >> hFlush h
 
 instance Monoid TermOutput where 
-    mempty = TermOutput $ \_ -> return ()
-    TermOutput f `mappend` TermOutput g = TermOutput $ \putc -> f putc >> g putc 
+    mempty = TermOutput $ \_ _ -> return ()
+    TermOutput f `mappend` TermOutput g = TermOutput $ \h putc -> f h putc >> g h putc 
 
 -- | A type class to encapsulate capabilities which take in zero or more 
 -- parameters.
