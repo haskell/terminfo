@@ -16,13 +16,35 @@ AC_ARG_WITH([curses-libraries],
 TERMINFO_INCLUDE_DIRS=
 TERMINFO_LIB_DIRS=
 if test "x$curses_libraries" != "xNONE"; then
+  LDFLAGS="-L$curses_libraries $LDFLAGS"
   TERMINFO_LIB_DIRS=$curses_libraries
 fi
 if test "x$curses_includes" != "xNONE"; then
+  CPPFLAGS="-I$curses_includes $CPPFLAGS"
   TERMINFO_INCLUDE_DIRS=$curses_includes
 fi
+
+AC_ARG_WITH([cc],
+            [C compiler],
+            [CC=$withval])
+AC_PROG_CC()
+
+
+AC_CHECK_LIB(ncurses, setupterm, HaveLibCurses=YES; LibCurses=ncurses,
+   AC_CHECK_LIB(curses, setupterm, HaveLibCurses=YES; LibCurses=curses,
+      HaveLibCurses=NO; LibCurses=not-installed))
+
+if test "x$HaveLibCurses" = "xNO" ; then
+    AC_MSG_FAILURE([curses library not found, so this package cannot be built])
+else
+    TERMINFO_LIB=$LibCurses
+fi
+
+
+
 AC_SUBST(TERMINFO_INCLUDE_DIRS)
 AC_SUBST(TERMINFO_LIB_DIRS)
+AC_SUBST(TERMINFO_LIB)
 
 
 AC_CONFIG_FILES([terminfo.buildinfo])
