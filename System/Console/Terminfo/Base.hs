@@ -10,15 +10,18 @@
 -- NOTE: Since this library is built on top of the curses interface, it is not thread-safe.
 
 module System.Console.Terminfo.Base(
+                            -- *  Initialization
                             Terminal(),
                             setupTerm,
                             setupTermFromEnv,
+                            -- * Capabilities
                             Capability,
                             getCapability,
                             tiGetFlag,
                             tiGuardFlag,
                             tiGetNum,
                             tiGetStr,
+                            -- * Output
                             TermOutput(),
                             runTermOutput,
                             hRunTermOutput,
