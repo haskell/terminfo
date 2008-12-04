@@ -43,6 +43,7 @@ import Foreign.Storable (peek,poke)
 import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
 import System.IO
+import Control.Exception.Extensible
 
 
 data TERMINAL = TERMINAL
@@ -86,9 +87,12 @@ setupTerm term = withCString term $ \c_term ->
 -- If @TERM@ is not set, we use the generic, minimal entry @dumb@.
 setupTermFromEnv :: IO Terminal
 setupTermFromEnv = do
-    env_term <- getEnv "TERM" 
+    env_term <- handle handleBadEnv $ getEnv "TERM" 
     let term = if null env_term then "dumb" else env_term
     setupTerm term
+  where
+    handleBadEnv :: IOException -> IO String
+    handleBadEnv _ = return ""
 
 withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
