@@ -27,14 +27,22 @@ module System.Console.Terminfo.Keys(
 
 import System.Console.Terminfo.Base
 
-keypadOn, keypadOff :: Capability TermOutput
+keypadOn :: Capability TermOutput
 keypadOn = tiGetOutput1 "smkx"
+
+keypadOff :: Capability TermOutput
 keypadOff = tiGetOutput1 "rmkx"
 
-keyUp, keyDown, keyLeft, keyRight :: Capability String
+keyUp :: Capability String
 keyUp = tiGetStr "kcuu1"
+
+keyDown :: Capability String
 keyDown = tiGetStr "kcud1"
+
+keyLeft :: Capability String
 keyLeft = tiGetStr "kcub1"
+
+keyRight :: Capability String
 keyRight = tiGetStr "kcuf1"
 
 -- | Look up the control sequence for a given function sequence.  For example, 
@@ -42,6 +50,8 @@ keyRight = tiGetStr "kcuf1"
 functionKey :: Int -> Capability String
 functionKey n = tiGetStr ("kf" ++ show n)
 
-keyBackspace, keyDeleteChar :: Capability String
+keyBackspace :: Capability String
 keyBackspace = tiGetStr "kbs"
+
+keyDeleteChar :: Capability String
 keyDeleteChar = tiGetStr "kdch1"

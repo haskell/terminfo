@@ -48,7 +48,8 @@ module System.Console.Terminfo.Cursor(
 import System.Console.Terminfo.Base
 import Control.Monad
 
-termLines, termColumns :: Capability Int
+termLines :: Capability Int
+termColumns :: Capability Int
 termLines = tiGetNum "lines"
 termColumns = tiGetNum "columns"
 
@@ -94,20 +95,34 @@ cursorDown1Fixed = do
     guard (str /= "\n")
     tiGetOutput1 "cud1"
 
-cursorDown1, cursorLeft1,cursorRight1,cursorUp1 :: Capability TermOutput
+cursorDown1 :: Capability TermOutput
 cursorDown1 = tiGetOutput1 "cud1"
+
+cursorLeft1 :: Capability TermOutput
 cursorLeft1 = tiGetOutput1 "cub1"
+
+cursorRight1 :: Capability TermOutput
 cursorRight1 = tiGetOutput1 "cuf1"
+
+cursorUp1 :: Capability TermOutput
 cursorUp1 = tiGetOutput1 "cuu1"
 
-cursorDown, cursorLeft, cursorRight, cursorUp :: Capability (Int -> TermOutput)
+cursorDown :: Capability (Int -> TermOutput)
 cursorDown = tiGetOutput1 "cud"
+
+cursorLeft :: Capability (Int -> TermOutput)
 cursorLeft = tiGetOutput1 "cub"
+
+cursorRight :: Capability (Int -> TermOutput)
 cursorRight = tiGetOutput1 "cuf"
+
+cursorUp :: Capability (Int -> TermOutput)
 cursorUp = tiGetOutput1 "cuu"
 
-cursorHome, cursorToLL :: Capability TermOutput
+cursorHome :: Capability TermOutput
 cursorHome = tiGetOutput1 "home"
+
+cursorToLL :: Capability TermOutput
 cursorToLL = tiGetOutput1 "ll"
 
 
@@ -127,10 +142,16 @@ move single param = let
                         return $ \n -> mconcat $ replicate n s
         in tryBoth `mplus` param `mplus` manySingle
 
-moveLeft, moveRight, moveUp, moveDown :: Capability (Int -> TermOutput)
+moveLeft :: Capability (Int -> TermOutput)
 moveLeft = move cursorLeft1 cursorLeft
+
+moveRight :: Capability (Int -> TermOutput)
 moveRight = move cursorRight1 cursorRight
+
+moveUp :: Capability (Int -> TermOutput)
 moveUp = move cursorUp1 cursorUp
+
+moveDown :: Capability (Int -> TermOutput)
 moveDown = move cursorDown1Fixed cursorDown
 
 -- | The @cr@ capability, which moves the cursor to the first column of the
@@ -149,8 +170,10 @@ newline = tiGetOutput1 "nel"
         -- Note it's OK to use cud1 here, despite the stty problem referenced 
         -- above, because carriageReturn already puts us on the first column.
 
-scrollForward, scrollReverse :: Capability TermOutput
+scrollForward :: Capability TermOutput
 scrollForward = tiGetOutput1 "ind"
+
+scrollReverse :: Capability TermOutput
 scrollReverse = tiGetOutput1 "ri"
 
 
@@ -159,8 +182,10 @@ data Point = Point {row, col :: Int}
 cursorAddress :: Capability (Point -> TermOutput)
 cursorAddress = fmap (\g p -> g (row p) (col p)) $ tiGetOutput1 "cup"
 
-columnAddress, rowAddress :: Capability (Int -> TermOutput)
+columnAddress :: Capability (Int -> TermOutput)
 columnAddress = tiGetOutput1 "hpa"
+
+rowAddress :: Capability (Int -> TermOutput)
 rowAddress = tiGetOutput1 "vpa"
 
 

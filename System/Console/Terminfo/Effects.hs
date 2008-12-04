@@ -22,19 +22,27 @@ wrapWith start end = do
     e <- end
     return (\t -> s <#> t <#> e)
 
-withStandout, withUnderline :: Capability (TermOutput -> TermOutput)
+withStandout :: Capability (TermOutput -> TermOutput)
 withStandout = wrapWith enterStandoutMode exitStandoutMode
+withUnderline :: Capability (TermOutput -> TermOutput)
 withUnderline = wrapWith enterUnderlineMode exitUnderlineMode
 
-enterStandoutMode, exitStandoutMode :: Capability TermOutput
+enterStandoutMode :: Capability TermOutput
 enterStandoutMode = tiGetOutput1 "smso"
+
+exitStandoutMode :: Capability TermOutput
 exitStandoutMode = tiGetOutput1 "rmso"
 
-enterUnderlineMode, exitUnderlineMode :: Capability TermOutput
+enterUnderlineMode :: Capability TermOutput
 enterUnderlineMode = tiGetOutput1 "smul"
+
+exitUnderlineMode :: Capability TermOutput
 exitUnderlineMode = tiGetOutput1 "rmul"
 
 
-bell, visualBell :: Capability TermOutput
+
+bell :: Capability TermOutput
 bell = tiGetOutput1 "bel"
+
+visualBell :: Capability TermOutput
 visualBell = tiGetOutput1 "flash"
