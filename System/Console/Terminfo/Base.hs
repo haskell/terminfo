@@ -14,6 +14,7 @@ module System.Console.Terminfo.Base(
                             Terminal(),
                             setupTerm,
                             setupTermFromEnv,
+                            SetupTermError,
                             -- * Capabilities
                             Capability,
                             getCapability,
@@ -47,6 +48,7 @@ import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
 import System.IO
 import Control.Exception.Extensible
+import Data.Typeable
 
 
 data TERMINAL = TERMINAL
@@ -59,7 +61,8 @@ foreign import ccall "&" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
 foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 
 -- | Initialize the terminfo library to the given terminal entry.
---
+-- 
+-- Throws a 'SetupTermError' if the terminfo database could not be read.
 setupTerm :: String -> IO Terminal
 setupTerm term = withCString term $ \c_term -> 
     {-- If the terminal name is the same as for the previous call to 
@@ -79,15 +82,26 @@ setupTerm term = withCString term $ \c_term ->
                         -- call setupterm and check the return value.
                         setupterm c_term stdOutput ret_ptr
                         ret <- peek ret_ptr
-                        when (ret /= 1) $ error ("Couldn't lookup terminfo entry " ++ show term)
+                        when (ret /= 1) $ throwIO $ SetupTermError
+                                $ "Couldn't lookup terminfo entry " ++ show term
                         -- set cur_term to its previous value
                         cterm <- peek cur_term
                         poke cur_term old_term 
                         -- create the Terminal and return it.
                         fmap Terminal $ newForeignPtr del_curterm cterm
+
+data SetupTermError = SetupTermError String
+                        deriving Typeable
+
+instance Show SetupTermError where
+    show (SetupTermError str) = "setupTerm: " ++ str
+
+instance Exception SetupTermError where
                             
 -- | Initialize the terminfo library, using the @TERM@ environmental variable.
 -- If @TERM@ is not set, we use the generic, minimal entry @dumb@.
+-- 
+-- Throws a 'SetupTermError' if the terminfo database could not be read.
 setupTermFromEnv :: IO Terminal
 setupTermFromEnv = do
     env_term <- handle handleBadEnv $ getEnv "TERM" 
