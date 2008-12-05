@@ -22,7 +22,9 @@ module System.Console.Terminfo.Keys(
                     -- * Miscellaneous
                     functionKey,
                     keyBackspace,
-                    keyDeleteChar
+                    keyDeleteChar,
+                    keyHome,
+                    keyEnd
                     ) where
 
 import System.Console.Terminfo.Base
@@ -55,3 +57,9 @@ keyBackspace = tiGetStr "kbs"
 
 keyDeleteChar :: Capability String
 keyDeleteChar = tiGetStr "kdch1"
+
+keyHome :: Capability String
+keyHome = tiGetStr "khome"
+
+keyEnd :: Capability String
+keyEnd = tiGetStr "kend"
