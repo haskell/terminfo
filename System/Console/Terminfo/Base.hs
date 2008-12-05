@@ -64,31 +64,28 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 -- 
 -- Throws a 'SetupTermError' if the terminfo database could not be read.
 setupTerm :: String -> IO Terminal
-setupTerm term = withCString term $ \c_term -> 
-    {-- If the terminal name is the same as for the previous call to 
-    setupterm, ncurses will return cur_term instead of a new struct.
-    This leads to problems when calling del_curterm on a struct shared by
-    more than one Terminal.  To avoid this behavior, we temporarily set the
-    cur_term value to nullPtr.
-    --}
-                    with 0 $ \ret_ptr -> do
-                        -- NOTE: I believe that for the way we use terminfo 
-                        -- (i.e. custom output function)
-                        -- this parameter does not affect anything.
-                        let stdOutput = 1
-                        -- set cur_term to null, temporarily
-                        old_term <- peek cur_term
-                        poke cur_term nullPtr
-                        -- call setupterm and check the return value.
-                        setupterm c_term stdOutput ret_ptr
-                        ret <- peek ret_ptr
-                        when (ret /= 1) $ throwIO $ SetupTermError
-                                $ "Couldn't lookup terminfo entry " ++ show term
-                        -- set cur_term to its previous value
-                        cterm <- peek cur_term
-                        poke cur_term old_term 
-                        -- create the Terminal and return it.
-                        fmap Terminal $ newForeignPtr del_curterm cterm
+setupTerm term = bracket (peek cur_term) (poke cur_term) $ \_ -> 
+    withCString term $ \c_term ->
+    with 0 $ \ret_ptr -> do
+        -- NOTE: I believe that for the way we use terminfo
+        -- (i.e. custom output function)
+        -- this parameter does not affect anything.
+        let stdOutput = 1
+        {-- Force ncurses to return a new struct rather than
+        a copy of the current one (which it would do if the
+        terminal names are the same).  This prevents problems
+        when calling del_term on a struct shared by more than one
+        Terminal. --}
+        poke cur_term nullPtr
+        -- Call setupterm and check the return value.
+        setupterm c_term stdOutput ret_ptr
+        ret <- peek ret_ptr
+        if (ret /=1)
+            then throwIO $ SetupTermError
+                $ "Couldn't look up terminfo entry " ++ show term
+            else do
+                cterm <- peek cur_term
+                fmap Terminal $ newForeignPtr del_curterm cterm
 
 data SetupTermError = SetupTermError String
                         deriving Typeable
@@ -97,7 +94,7 @@ instance Show SetupTermError where
     show (SetupTermError str) = "setupTerm: " ++ str
 
 instance Exception SetupTermError where
-                            
+
 -- | Initialize the terminfo library, using the @TERM@ environmental variable.
 -- If @TERM@ is not set, we use the generic, minimal entry @dumb@.
 -- 
