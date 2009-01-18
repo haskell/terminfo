@@ -1,4 +1,3 @@
-{-# INCLUDE <term.h> #-}
 -- |
 -- Maintainer  : judah.jacobson@gmail.com
 -- Stability   : experimental
