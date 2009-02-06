@@ -10,7 +10,7 @@ Maintainer:     Judah Jacobson <judah.jacobson@gmail.com>
 Category:       User Interfaces
 Synopsis:       Haskell bindings to the terminfo library.
 Description:    This library provides an interface to the terminfo database (via bindings to the
-                curses library).  Terminfo allows programs to interact with a variety of terminals 
+                curses library).  Terminfo allows POSIX systems to interact with a variety of terminals 
                 using a standard set of capabilities.  
 Homepage:       http://code.haskell.org/terminfo
 Stability:      Experimental
