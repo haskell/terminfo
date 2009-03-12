@@ -1,6 +1,6 @@
 Name:           terminfo
 Cabal-Version:  >=1.4
-Version:        0.3.0.1
+Version:        0.3.0.2
 Category:       User Interfaces
 License:        BSD3
 License-File:   LICENSE
