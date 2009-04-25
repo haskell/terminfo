@@ -38,6 +38,8 @@ module System.Console.Terminfo.Cursor(
                         cursorLeft,
                         cursorRight,
                         cursorUp, 
+                        cursorHome,
+                        cursorToLL,
                         -- * Absolute cursor movements
                         cursorAddress,
                         Point(..),
@@ -129,6 +131,8 @@ cursorToLL = tiGetOutput1 "ll"
 -- Movements are built out of parametrized and unparam'd movement
 -- capabilities.
 -- todo: more complicated logic like ncurses does.
+move :: Capability TermOutput -> Capability (Int -> TermOutput)
+                              -> Capability (Int -> TermOutput)
 move single param = let
         tryBoth = do
                     s <- single
@@ -136,7 +140,7 @@ move single param = let
                     return $ \n -> case n of
                         0 -> mempty
                         1 -> s
-                        n -> p n
+                        _ -> p n
         manySingle = do
                         s <- single
                         return $ \n -> mconcat $ replicate n s

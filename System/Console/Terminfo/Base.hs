@@ -50,7 +50,7 @@ import Control.Exception.Extensible
 import Data.Typeable
 
 
-data TERMINAL = TERMINAL
+data TERMINAL
 newtype Terminal = Terminal (ForeignPtr TERMINAL)
 
 foreign import ccall "&" cur_term :: Ptr (Ptr TERMINAL)
@@ -202,6 +202,7 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
             = withCString cap $ \c_cap -> do
                 result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
                 peekCString result
+          tparm' _ = fail "tParm: List too short"
 
 -- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)

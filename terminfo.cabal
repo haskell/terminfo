@@ -18,7 +18,7 @@ Build-type:     Configure
 Build-depends:  base>=1.0, extensible-exceptions>=0.1.1.0 && < 0.2
 extra-source-files: configure.ac configure terminfo.buildinfo.in
 extra-tmp-files: config.log config.status autom4te.cache terminfo.buildinfo
-Extensions:     ForeignFunctionInterface, DeriveDataTypeable
+Extensions:     ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls
 Exposed-Modules:
                 System.Console.Terminfo
                 System.Console.Terminfo.Base
