@@ -112,9 +112,9 @@ withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
         old_term <- peek cur_term
         if old_term /= cterm
             then do
-                    set_curterm cterm
+                    _ <- set_curterm cterm
                     x <- f
-                    set_curterm old_term
+                    _ <- set_curterm old_term
                     return x
             else f
 
