@@ -16,7 +16,7 @@ module System.Console.Terminfo.Color(
                     ) where
 
 import System.Console.Terminfo.Base
-import Control.Monad (guard, mplus)
+import Control.Monad (mplus)
 
 -- TODOs:
 -- examples
