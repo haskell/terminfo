@@ -206,10 +206,9 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
 
 -- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
-tiGetOutput cap = flip fmap (tiGetStr cap) $ 
-    \str ps la -> TermOutput $ \_ putc -> do
-        outStr <- tParm str ps
-        tPuts outStr la putc
+tiGetOutput cap = do
+    s <- tiGetStr cap
+    return $ \ps la -> TermOutput (TOCmd ps la s:)
 
 type CharOutput = CInt -> IO CInt
 
@@ -230,7 +229,25 @@ tPuts s n putc = withCString s $ \c_str -> tputs c_str (toEnum n) putc
 -- | An action which sends output to the terminal.  That output may mix plain text with control
 -- characters and escape sequences, along with delays (called \"padding\") required by some older
 -- terminals.
-newtype TermOutput = TermOutput (Handle -> FunPtr CharOutput -> IO ())
+
+-- We structure this similarly to ShowS, so that appends don't cause space leaks.
+newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
+
+data TermOutputType = TOCmd [Int] LinesAffected String
+                    | TOStr String
+
+instance Monoid TermOutput where
+    mempty = TermOutput id
+    TermOutput xs `mappend` TermOutput ys = TermOutput (xs . ys)
+
+termText :: String -> TermOutput 
+termText str = TermOutput (TOStr str:)
+
+writeToTerm :: FunPtr CharOutput -> Handle -> TermOutputType -> IO ()
+writeToTerm putc _ (TOCmd params numLines s) = do
+    outStr <- tParm s params
+    tPuts outStr numLines putc
+writeToTerm _ h (TOStr s) = hPutStr h s >> hFlush h
 
 -- | Write the terminal output to the standard output device.
 runTermOutput :: Terminal -> TermOutput -> IO ()
@@ -241,19 +258,11 @@ runTermOutput = hRunTermOutput stdout
 hRunTermOutput :: Handle -> Terminal -> TermOutput -> IO ()
 hRunTermOutput h term (TermOutput to) = do
     putc_ptr <- mkCallback putc
-    withCurTerm term (to h putc_ptr)
+    withCurTerm term $ mapM_ (writeToTerm putc_ptr h) (to [])
     freeHaskellFunPtr putc_ptr
   where
     putc c = let c' = toEnum $ fromEnum c
              in hPutChar h c' >> hFlush h >> return c
-
--- | Output plain text containing no control characters or escape sequences.
-termText :: String -> TermOutput
-termText str = TermOutput $ \h _ -> hPutStr h str >> hFlush h
-
-instance Monoid TermOutput where 
-    mempty = TermOutput $ \_ _ -> return ()
-    TermOutput f `mappend` TermOutput g = TermOutput $ \h putc -> f h putc >> g h putc 
 
 -- | A type class to encapsulate capabilities which take in zero or more 
 -- parameters.
