@@ -20,6 +20,7 @@ Build-depends:  base >= 1.0 && < 5,
 extra-source-files: configure.ac configure terminfo.buildinfo.in
 extra-tmp-files: config.log config.status autom4te.cache terminfo.buildinfo
 Extensions:     ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls
+ghc-options:    -Wall
 Exposed-Modules:
                 System.Console.Terminfo
                 System.Console.Terminfo.Base
