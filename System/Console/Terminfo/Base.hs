@@ -22,17 +22,20 @@ module System.Console.Terminfo.Base(
                             tiGetNum,
                             tiGetStr,
                             -- * Output
+                            -- $outputdoc
+                            tiGetOutput1,
+                            OutputCap,
+                            TermStr,
+                            -- ** TermOutput
                             TermOutput(),
                             runTermOutput,
                             hRunTermOutput,
                             termText,
                             tiGetOutput,
                             LinesAffected,
-                            tiGetOutput1,
-                            OutputCap,
                             -- ** Monoid functions
                             Monoid(..),
-                            (<#>)
+                            (<#>),
                             ) where
 
 
@@ -107,6 +110,7 @@ setupTermFromEnv = do
     handleBadEnv :: IOException -> IO String
     handleBadEnv _ = return ""
 
+-- TODO: this isn't really thread-safe...
 withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
         old_term <- peek cur_term
@@ -117,6 +121,58 @@ withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
                     _ <- set_curterm old_term
                     return x
             else f
+
+
+----------------------
+
+-- Note I'm relying on this working even for strings with unset parameters.
+strHasPadding :: String -> Bool
+strHasPadding [] = False
+strHasPadding ('$':'<':_) = True
+strHasPadding (_:cs) = strHasPadding cs
+
+-- | An action which sends output to the terminal.  That output may mix plain text with control
+-- characters and escape sequences, along with delays (called \"padding\") required by some older
+-- terminals.
+
+-- We structure this similarly to ShowS, so that appends don't cause space leaks.
+newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
+
+data TermOutputType = TOCmd LinesAffected String
+                    | TOStr String
+
+instance Monoid TermOutput where
+    mempty = TermOutput id
+    TermOutput xs `mappend` TermOutput ys = TermOutput (xs . ys)
+
+termText :: String -> TermOutput 
+termText str = TermOutput (TOStr str :)
+
+-- | Write the terminal output to the standard output device.
+runTermOutput :: Terminal -> TermOutput -> IO ()
+runTermOutput = hRunTermOutput stdout
+
+-- | Write the terminal output to the terminal or file managed by the given
+-- 'Handle'.
+hRunTermOutput :: Handle -> Terminal -> TermOutput -> IO ()
+hRunTermOutput h term (TermOutput to) = do
+    putc_ptr <- mkCallback putc
+    withCurTerm term $ mapM_ (writeToTerm putc_ptr h) (to [])
+    freeHaskellFunPtr putc_ptr
+  where
+    putc c = let c' = toEnum $ fromEnum c
+             in hPutChar h c' >> hFlush h >> return c
+
+writeToTerm :: FunPtr CharOutput -> Handle -> TermOutputType -> IO ()
+writeToTerm putc _ (TOCmd numLines s) = tPuts s numLines putc
+writeToTerm _ h (TOStr s) = hPutStr h s >> hFlush h
+
+infixl 2 <#>
+
+-- | An operator version of 'mappend'.
+(<#>) :: Monoid m => m -> m -> m
+(<#>) = mappend
+---------------------------------
 
 -- | A feature or operation which a 'Terminal' may define.
 newtype Capability a = Capability (IO (Maybe a))
@@ -172,10 +228,9 @@ tiGuardFlag cap = tiGetFlag cap >>= guard
                 
 foreign import ccall tigetstr :: CString -> IO CString
 
--- | Look up a string capability in the terminfo database.  
---
--- Note: Do not use this function for terminal output; use 'tiGetOutput'
--- instead.
+{-# DEPRECATED tiGetStr "use tiGetOutput instead." #-} 
+-- | Look up a string capability in the terminfo database.  NOTE: This function is deprecated; use
+-- 'tiGetOutput1' instead.
 tiGetStr :: String -> Capability String
 tiGetStr cap = Capability $ do
                 result <- withCString cap tigetstr 
@@ -185,12 +240,16 @@ tiGetStr cap = Capability $ do
     where
         -- hack; tigetstr sometimes returns (-1)
         neg1Ptr = nullPtr `plusPtr` (-1)
+
+
+---------------
+
+
                     
 foreign import ccall tparm ::
     CString -> CLong -> CLong -> CLong -> CLong -> CLong -> CLong 
     -> CLong -> CLong -> CLong -- p1,...,p9
     -> IO CString
-
 
 -- Note: I may want to cut out the middleman and pipe tGoto/tGetStr together
 -- with tput without a String marshall in the middle.
@@ -207,8 +266,14 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
 -- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
 tiGetOutput cap = do
-    s <- tiGetStr cap
-    return $ \ps la -> TermOutput (TOCmd ps la s:)
+    str <- tiGetStr cap
+    -- TODO: make sure to put withCurTerm in here somewhere...
+    -- check this doesn't cause slowdown, maybe just accesses a ptr
+    -- a bunch of times which should be OK?
+    return $ \ps la -> fromStr la $ unsafePerformIO $ tParm str ps
+
+fromStr :: LinesAffected -> String -> TermOutput
+fromStr la s = TermOutput (TOCmd la s :)
 
 type CharOutput = CInt -> IO CInt
 
@@ -226,66 +291,65 @@ type LinesAffected = Int
 tPuts :: String -> LinesAffected -> FunPtr CharOutput -> IO ()
 tPuts s n putc = withCString s $ \c_str -> tputs c_str (toEnum n) putc
 
--- | An action which sends output to the terminal.  That output may mix plain text with control
--- characters and escape sequences, along with delays (called \"padding\") required by some older
--- terminals.
-
--- We structure this similarly to ShowS, so that appends don't cause space leaks.
-newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
-
-data TermOutputType = TOCmd [Int] LinesAffected String
-                    | TOStr String
-
-instance Monoid TermOutput where
-    mempty = TermOutput id
-    TermOutput xs `mappend` TermOutput ys = TermOutput (xs . ys)
-
-termText :: String -> TermOutput 
-termText str = TermOutput (TOStr str:)
-
-writeToTerm :: FunPtr CharOutput -> Handle -> TermOutputType -> IO ()
-writeToTerm putc _ (TOCmd params numLines s) = do
-    outStr <- tParm s params
-    tPuts outStr numLines putc
-writeToTerm _ h (TOStr s) = hPutStr h s >> hFlush h
-
--- | Write the terminal output to the standard output device.
-runTermOutput :: Terminal -> TermOutput -> IO ()
-runTermOutput = hRunTermOutput stdout
-
--- | Write the terminal output to the terminal or file managed by the given
--- 'Handle'.
-hRunTermOutput :: Handle -> Terminal -> TermOutput -> IO ()
-hRunTermOutput h term (TermOutput to) = do
-    putc_ptr <- mkCallback putc
-    withCurTerm term $ mapM_ (writeToTerm putc_ptr h) (to [])
-    freeHaskellFunPtr putc_ptr
-  where
-    putc c = let c' = toEnum $ fromEnum c
-             in hPutChar h c' >> hFlush h >> return c
-
--- | A type class to encapsulate capabilities which take in zero or more 
--- parameters.
-class OutputCap f where
-    outputCap :: ([Int] -> TermOutput) -> [Int] -> f
-
-instance OutputCap TermOutput where
-    outputCap f xs = f (reverse xs)
-
-instance (Enum a, OutputCap f) => OutputCap (a -> f) where
-    outputCap f xs = \x -> outputCap f (fromEnum x:xs)
 
 -- | Look up an output capability which takes a fixed number of parameters
 -- (for example, @Int -> Int -> TermOutput@).
 -- 
 -- For capabilities which may contain variable-length
 -- padding, use 'tiGetOutput' instead.
-tiGetOutput1 :: OutputCap f => String -> Capability f
-tiGetOutput1 str = fmap (\f -> outputCap (flip f 1) []) $ tiGetOutput str
+tiGetOutput1 :: forall f . OutputCap f => String -> Capability f
+tiGetOutput1 str = do
+    cap <- tiGetStr str
+    guard (hasOkPadding (undefined :: f) cap)
+    -- TODO: withCurTerm somewhere
+    let listCap xs = unsafePerformIO $ tParm cap xs
+    return $ outputCap listCap []
 
-infixl 2 <#>
 
--- | An operator version of 'mappend'.
-(<#>) :: Monoid m => m -> m -> m
-(<#>) = mappend
+-- OK, this is the structure that I want:
+class OutputCap f where
+    hasOkPadding :: f -> String -> Bool
+    outputCap :: ([Int] -> String) -> [Int] -> f
 
+instance OutputCap [Char] where
+    hasOkPadding _ = not . strHasPadding 
+    outputCap f xs = f (reverse xs)
+
+instance OutputCap TermOutput where
+    hasOkPadding _ = const True
+    outputCap f xs = fromStr 1 $ f $ reverse xs
+
+instance (Enum p, OutputCap f) => OutputCap (p -> f) where
+    outputCap f xs = \x -> outputCap f (fromEnum x:xs)
+    hasOkPadding _ = hasOkPadding (undefined :: f)
+
+
+{- $outputdoc
+Terminfo contains many string capabilities for special effects.
+For example, the @cuu1@ capability moves the cursor up one line; on ANSI terminals
+this is accomplished by printing the control sequence @\"\\ESC[A\"@.
+However, some older terminals also require \"padding\", or short pauses, after certain commands.
+For example, when @TERM=vt100@ the @cuu1@ capability is @\"\\ESC[A$\<2\>\"@, which instructs terminfo
+to pause for two milliseconds after outputting the control sequence.
+
+The 'TermOutput' monoid abstracts away all padding and control
+sequence output.  Unfortunately, that datatype is difficult to integrate into existing 'String'-based APIs
+such as pretty-printers.  Thus, as a workaround, 'tiGetOutput1' also lets us access the control sequences as 'String's.  The one caveat is that it will not allow you to access padded control sequences as Strings.  For example:
+
+   > > t <- setupTerm "vt100"
+   > > isJust (getCapability t (tiGetOutput1 "cuu1") :: Maybe String)
+   > False
+   > > isJust (getCapability t (tiGetOutput1 "cuu1") :: Maybe TermOutput)
+   > True
+
+'String' capabilities will work with software-based terminal types such as @xterm@ and @linux@.
+However, you should use 'TermOutput' if compatibility with older terminals is important.
+Additionally, the @visualBell@ capability which flashes the screen usually produces its effect with a padding directive, so it will only work with 'TermOutput'.
+
+-}
+
+
+class (Monoid s, OutputCap s) => TermStr s
+
+instance TermStr [Char]
+instance TermStr TermOutput

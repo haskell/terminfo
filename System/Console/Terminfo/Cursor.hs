@@ -91,48 +91,48 @@ Since there's no easy way to check for ONLCR at this point, I've just made
 moveDown only use cud1 if it's not '\n'.
 Suggestions are welcome.
 --}
-cursorDown1Fixed :: Capability TermOutput
+cursorDown1Fixed :: TermStr s => Capability s
 cursorDown1Fixed = do
-    str <- tiGetStr "cud1"
+    str <- tiGetOutput1 "cud1"
     guard (str /= "\n")
     tiGetOutput1 "cud1"
 
-cursorDown1 :: Capability TermOutput
+cursorDown1 :: TermStr s => Capability s
 cursorDown1 = tiGetOutput1 "cud1"
 
-cursorLeft1 :: Capability TermOutput
+cursorLeft1 :: TermStr s => Capability s
 cursorLeft1 = tiGetOutput1 "cub1"
 
-cursorRight1 :: Capability TermOutput
+cursorRight1 :: TermStr s => Capability s
 cursorRight1 = tiGetOutput1 "cuf1"
 
-cursorUp1 :: Capability TermOutput
+cursorUp1 :: TermStr s => Capability s
 cursorUp1 = tiGetOutput1 "cuu1"
 
-cursorDown :: Capability (Int -> TermOutput)
+cursorDown :: TermStr s => Capability (Int -> s)
 cursorDown = tiGetOutput1 "cud"
 
-cursorLeft :: Capability (Int -> TermOutput)
+cursorLeft :: TermStr s => Capability (Int -> s)
 cursorLeft = tiGetOutput1 "cub"
 
-cursorRight :: Capability (Int -> TermOutput)
+cursorRight :: TermStr s => Capability (Int -> s)
 cursorRight = tiGetOutput1 "cuf"
 
-cursorUp :: Capability (Int -> TermOutput)
+cursorUp :: TermStr s => Capability (Int -> s)
 cursorUp = tiGetOutput1 "cuu"
 
-cursorHome :: Capability TermOutput
+cursorHome :: TermStr s => Capability s
 cursorHome = tiGetOutput1 "home"
 
-cursorToLL :: Capability TermOutput
+cursorToLL :: TermStr s => Capability s
 cursorToLL = tiGetOutput1 "ll"
 
 
 -- Movements are built out of parametrized and unparam'd movement
 -- capabilities.
 -- todo: more complicated logic like ncurses does.
-move :: Capability TermOutput -> Capability (Int -> TermOutput)
-                              -> Capability (Int -> TermOutput)
+move :: TermStr s => Capability s -> Capability (Int -> s)
+                              -> Capability (Int -> s)
 move single param = let
         tryBoth = do
                     s <- single
@@ -146,50 +146,50 @@ move single param = let
                         return $ \n -> mconcat $ replicate n s
         in tryBoth `mplus` param `mplus` manySingle
 
-moveLeft :: Capability (Int -> TermOutput)
+moveLeft :: TermStr s => Capability (Int -> s)
 moveLeft = move cursorLeft1 cursorLeft
 
-moveRight :: Capability (Int -> TermOutput)
+moveRight :: TermStr s => Capability (Int -> s)
 moveRight = move cursorRight1 cursorRight
 
-moveUp :: Capability (Int -> TermOutput)
+moveUp :: TermStr s => Capability (Int -> s)
 moveUp = move cursorUp1 cursorUp
 
-moveDown :: Capability (Int -> TermOutput)
+moveDown :: TermStr s => Capability (Int -> s)
 moveDown = move cursorDown1Fixed cursorDown
 
 -- | The @cr@ capability, which moves the cursor to the first column of the
 -- current line.
-carriageReturn :: Capability TermOutput
+carriageReturn :: TermStr s => Capability s
 carriageReturn = tiGetOutput1 "cr"
 
 -- | The @nel@ capability, which moves the cursor to the first column of
 -- the next line.  It behaves like a carriage return followed by a line feed.
 --
 -- If @nel@ is not defined, this may be built out of other capabilities.
-newline :: Capability TermOutput
+newline :: TermStr s => Capability s
 newline = tiGetOutput1 "nel" 
     `mplus` (liftM2 mappend carriageReturn 
                             (scrollForward `mplus` tiGetOutput1 "cud1"))
         -- Note it's OK to use cud1 here, despite the stty problem referenced 
         -- above, because carriageReturn already puts us on the first column.
 
-scrollForward :: Capability TermOutput
+scrollForward :: TermStr s => Capability s
 scrollForward = tiGetOutput1 "ind"
 
-scrollReverse :: Capability TermOutput
+scrollReverse :: TermStr s => Capability s
 scrollReverse = tiGetOutput1 "ri"
 
 
 data Point = Point {row, col :: Int}
 
-cursorAddress :: Capability (Point -> TermOutput)
+cursorAddress :: TermStr s => Capability (Point -> s)
 cursorAddress = fmap (\g p -> g (row p) (col p)) $ tiGetOutput1 "cup"
 
-columnAddress :: Capability (Int -> TermOutput)
+columnAddress :: TermStr s => Capability (Int -> s)
 columnAddress = tiGetOutput1 "hpa"
 
-rowAddress :: Capability (Int -> TermOutput)
+rowAddress :: TermStr s => Capability (Int -> s)
 rowAddress = tiGetOutput1 "vpa"
 
 

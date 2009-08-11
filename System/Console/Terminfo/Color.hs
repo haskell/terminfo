@@ -65,18 +65,18 @@ colorInt c = case c of
 -- terminal's foreground color while outputting the given text, and
 -- then restores the terminal to its default foreground and background
 -- colors.
-withForegroundColor :: Capability (Color -> TermOutput -> TermOutput)
+withForegroundColor :: TermStr s => Capability (Color -> s -> s)
 withForegroundColor = withColorCmd setForegroundColor
 
 -- | This capability temporarily sets the
 -- terminal's background color while outputting the given text, and
 -- then restores the terminal to its default foreground and background
 -- colors.
-withBackgroundColor :: Capability (Color -> TermOutput -> TermOutput)
+withBackgroundColor :: TermStr s => Capability (Color -> s -> s)
 withBackgroundColor = withColorCmd setBackgroundColor
 
-withColorCmd :: Capability (a -> TermOutput)
-            -> Capability (a -> TermOutput -> TermOutput)
+withColorCmd :: TermStr s => Capability (a -> s)
+            -> Capability (a -> s -> s)
 withColorCmd getSet = do
     set <- getSet
     restore <- restoreDefaultColors
@@ -84,7 +84,7 @@ withColorCmd getSet = do
 
 -- | Sets the foreground color of all further text output, using
 -- either the @setaf@ or @setf@ capability.
-setForegroundColor :: Capability (Color -> TermOutput)
+setForegroundColor :: TermStr s => Capability (Color -> s)
 setForegroundColor = setaf `mplus` setf
     where
         setaf = fmap (. colorIntA) $ tiGetOutput1 "setaf"
@@ -92,17 +92,17 @@ setForegroundColor = setaf `mplus` setf
 
 -- | Sets the background color of all further text output, using
 -- either the @setab@ or @setb@ capability.
-setBackgroundColor :: Capability (Color -> TermOutput)
+setBackgroundColor :: TermStr s => Capability (Color -> s)
 setBackgroundColor = setab `mplus` setb
     where
         setab = fmap (. colorIntA) $ tiGetOutput1 "setab"
         setb = fmap (. colorInt) $ tiGetOutput1 "setb"
 
 {-
-withColorPair :: Capability (ColorPair -> TermOutput -> TermOutput)
+withColorPair :: TermStr s => Capability (ColorPair -> s -> s)
 withColorPair = withColorCmd setColorPair
 
-setColorPair :: Capability (ColorPair -> TermOutput)
+setColorPair :: TermStr s => Capability (ColorPair -> s)
 setColorPair = do
     setf <- setForegroundColor
     setb <- setBackgroundColor
@@ -114,5 +114,5 @@ type ColorPair = (Color,Color)
 
 -- | Restores foreground/background colors to their original
 -- settings.
-restoreDefaultColors :: Capability TermOutput
+restoreDefaultColors :: TermStr s => Capability s 
 restoreDefaultColors = tiGetOutput1 "op"

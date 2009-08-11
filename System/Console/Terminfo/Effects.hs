@@ -31,8 +31,7 @@ module System.Console.Terminfo.Effects(
 import System.Console.Terminfo.Base
 import Control.Monad
 
-wrapWith :: Capability TermOutput -> Capability TermOutput 
-                -> Capability (TermOutput -> TermOutput)
+wrapWith :: TermStr s => Capability s -> Capability s -> Capability (s -> s)
 wrapWith start end = do
     s <- start
     e <- end
@@ -40,52 +39,52 @@ wrapWith start end = do
 
 -- | Turns on standout mode before outputting the given
 -- text, and then turns it off.
-withStandout :: Capability (TermOutput -> TermOutput)
+withStandout :: TermStr s => Capability (s -> s)
 withStandout = wrapWith enterStandoutMode exitStandoutMode
 
 -- | Turns on underline mode before outputting the given
 -- text, and then turns it off.
-withUnderline :: Capability (TermOutput -> TermOutput)
+withUnderline :: TermStr s => Capability (s -> s)
 withUnderline = wrapWith enterUnderlineMode exitUnderlineMode
 
 -- | Turns on bold mode before outputting the given text, and then turns
 -- all attributes off.
-withBold :: Capability (TermOutput -> TermOutput)
+withBold :: TermStr s => Capability (s -> s)
 withBold = wrapWith boldOn allAttributesOff
 
-enterStandoutMode :: Capability TermOutput
+enterStandoutMode :: TermStr s => Capability s
 enterStandoutMode = tiGetOutput1 "smso"
 
-exitStandoutMode :: Capability TermOutput
+exitStandoutMode :: TermStr s => Capability s
 exitStandoutMode = tiGetOutput1 "rmso"
 
-enterUnderlineMode :: Capability TermOutput
+enterUnderlineMode :: TermStr s => Capability s
 enterUnderlineMode = tiGetOutput1 "smul"
 
-exitUnderlineMode :: Capability TermOutput
+exitUnderlineMode :: TermStr s => Capability s
 exitUnderlineMode = tiGetOutput1 "rmul"
 
-reverseOn :: Capability TermOutput
+reverseOn :: TermStr s => Capability s
 reverseOn = tiGetOutput1 "rev"
 
-blinkOn:: Capability TermOutput
+blinkOn:: TermStr s => Capability s
 blinkOn = tiGetOutput1 "blink"
 
-boldOn :: Capability TermOutput
+boldOn :: TermStr s => Capability s
 boldOn = tiGetOutput1 "bold"
 
-dimOn :: Capability TermOutput
+dimOn :: TermStr s => Capability s
 dimOn = tiGetOutput1 "dim"
 
-invisibleOn :: Capability TermOutput
+invisibleOn :: TermStr s => Capability s
 invisibleOn = tiGetOutput1 "invis"
 
-protectedOn :: Capability TermOutput
+protectedOn :: TermStr s => Capability s
 protectedOn = tiGetOutput1 "prot"
 
 -- | Turns off all text attributes.  This capability will always succeed, but it has
 -- no effect in terminals which do not support text attributes.
-allAttributesOff :: Capability TermOutput
+allAttributesOff :: TermStr s => Capability s
 allAttributesOff = tiGetOutput1 "sgr0" `mplus` return mempty
 
 data Attributes = Attributes {
@@ -103,7 +102,7 @@ data Attributes = Attributes {
 -- | Sets the attributes on or off before outputting the given text,
 -- and then turns them all off.  This capability will always succeed; properties
 -- which cannot be set in the current terminal will be ignored.
-withAttributes :: Capability (Attributes -> TermOutput -> TermOutput)
+withAttributes :: TermStr s => Capability (Attributes -> s -> s)
 withAttributes = do
     set <- setAttributes
     off <- allAttributesOff
@@ -111,28 +110,26 @@ withAttributes = do
 
 -- | Sets the attributes on or off.  This capability will always succeed;
 -- properties which cannot be set in the current terminal will be ignored.
-setAttributes :: Capability (Attributes -> TermOutput)
+setAttributes :: TermStr s => Capability (Attributes -> s)
 setAttributes = usingSGR0 `mplus` manualSets
     where
         usingSGR0 = do
-            sgr <- tiGetOutput "sgr"
-            return $ \a -> let mkAttr f = if f a then 1 else 0
-                           in flip sgr 0 $ map mkAttr [ standoutAttr
-                                                       , underlineAttr
-                                                       , reverseAttr
-                                                       , blinkAttr
-                                                       , dimAttr
-                                                       , boldAttr
-                                                       , invisibleAttr
-                                                       , protectedAttr
-                                                       ]
-                                                ++ [0] -- for alt. char sets
-        attrCap :: (Attributes -> Bool) -> Capability TermOutput
-                    -> Capability (Attributes -> TermOutput)
+            sgr <- tiGetOutput1 "sgr"
+            return $ \a -> let mkAttr f = if f a then 1 else 0 :: Int
+                           in sgr (mkAttr standoutAttr)
+                                  (mkAttr underlineAttr)
+                                  (mkAttr reverseAttr)
+                                  (mkAttr blinkAttr)
+                                  (mkAttr dimAttr)
+                                  (mkAttr boldAttr)
+                                  (mkAttr invisibleAttr)
+                                  (mkAttr protectedAttr)
+                                  (0::Int) -- for alt. character sets
+        attrCap :: TermStr s => (Attributes -> Bool) -> Capability s 
+                    -> Capability (Attributes -> s)
         attrCap f cap = do {to <- cap; return $ \a -> if f a then to else mempty}
                         `mplus` return (const mempty)
         manualSets = do
-            allOff <- allAttributesOff
             cs <- sequence [attrCap standoutAttr enterStandoutMode
                             , attrCap underlineAttr enterUnderlineMode
                             , attrCap reverseAttr reverseOn
@@ -151,7 +148,7 @@ defaultAttributes :: Attributes
 defaultAttributes = Attributes False False False False False False False False
 
 -- | Sound the audible bell.
-bell :: Capability TermOutput
+bell :: TermStr s => Capability s
 bell = tiGetOutput1 "bel"
 
 -- | Present a visual alert using the @flash@ capability.

@@ -11,11 +11,11 @@ clearScreen :: Capability (LinesAffected -> TermOutput)
 clearScreen = fmap ($ []) $ tiGetOutput "clear" 
 
 -- | Clear from beginning of line to cursor.
-clearBOL :: Capability TermOutput
+clearBOL :: TermStr s => Capability s
 clearBOL = tiGetOutput1 "el1"
 
 -- | Clear from cursor to end of line.
-clearEOL :: Capability TermOutput
+clearEOL :: TermStr s => Capability s
 clearEOL = tiGetOutput1 "el"
 
 -- | Clear display after cursor.

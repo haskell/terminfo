@@ -29,37 +29,37 @@ module System.Console.Terminfo.Keys(
 
 import System.Console.Terminfo.Base
 
-keypadOn :: Capability TermOutput
+keypadOn :: TermStr s => Capability s
 keypadOn = tiGetOutput1 "smkx"
 
-keypadOff :: Capability TermOutput
+keypadOff :: TermStr s => Capability s
 keypadOff = tiGetOutput1 "rmkx"
 
 keyUp :: Capability String
-keyUp = tiGetStr "kcuu1"
+keyUp = tiGetOutput1 "kcuu1"
 
 keyDown :: Capability String
-keyDown = tiGetStr "kcud1"
+keyDown = tiGetOutput1 "kcud1"
 
 keyLeft :: Capability String
-keyLeft = tiGetStr "kcub1"
+keyLeft = tiGetOutput1 "kcub1"
 
 keyRight :: Capability String
-keyRight = tiGetStr "kcuf1"
+keyRight = tiGetOutput1 "kcuf1"
 
 -- | Look up the control sequence for a given function sequence.  For example, 
 -- @functionKey 12@ retrieves the @kf12@ capability.
 functionKey :: Int -> Capability String
-functionKey n = tiGetStr ("kf" ++ show n)
+functionKey n = tiGetOutput1 ("kf" ++ show n)
 
 keyBackspace :: Capability String
-keyBackspace = tiGetStr "kbs"
+keyBackspace = tiGetOutput1 "kbs"
 
 keyDeleteChar :: Capability String
-keyDeleteChar = tiGetStr "kdch1"
+keyDeleteChar = tiGetOutput1 "kdch1"
 
 keyHome :: Capability String
-keyHome = tiGetStr "khome"
+keyHome = tiGetOutput1 "khome"
 
 keyEnd :: Capability String
-keyEnd = tiGetStr "kend"
+keyEnd = tiGetOutput1 "kend"
