@@ -175,37 +175,37 @@ infixl 2 <#>
 ---------------------------------
 
 -- | A feature or operation which a 'Terminal' may define.
-newtype Capability a = Capability (IO (Maybe a))
+newtype Capability a = Capability (Terminal -> IO (Maybe a))
 
 getCapability :: Terminal -> Capability a -> Maybe a
-getCapability term (Capability f) = unsafePerformIO $ withCurTerm term f
+getCapability term (Capability f) = unsafePerformIO $ withCurTerm term (f term)
 
 -- Note that the instances for Capability of Functor, Monad and MonadPlus 
 -- use the corresponding instances for Maybe.
 instance Functor Capability where
-    fmap f (Capability g) = Capability (fmap (fmap f) g) 
+    fmap f (Capability g) = Capability $ \t -> fmap (fmap f) (g t)
 
 instance Monad Capability where
-    return = Capability . return . Just
-    Capability f >>= g = Capability $ do
-        mx <- f
+    return = Capability . const . return . Just
+    Capability f >>= g = Capability $ \t -> do
+        mx <- f t
         case mx of
             Nothing -> return Nothing
-            Just x -> let Capability g' = g x in g'
+            Just x -> let Capability g' = g x in g' t
 
 instance MonadPlus Capability where
-    mzero = Capability (return Nothing)
-    Capability f `mplus` Capability g = Capability $ do
-        mx <- f
+    mzero = Capability (const $ return Nothing)
+    Capability f `mplus` Capability g = Capability $ \t -> do
+        mx <- f t
         case mx of
-            Nothing -> g
+            Nothing -> g t
             _ -> return mx
 
 foreign import ccall tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
 tiGetNum :: String -> Capability Int 
-tiGetNum cap = Capability $ do
+tiGetNum cap = Capability $ const $ do
                 n <- fmap fromEnum (withCString cap tigetnum)
                 if n >= 0
                     then return (Just n)
@@ -218,7 +218,7 @@ foreign import ccall tigetflag :: CString -> IO CInt
 -- capability is absent or set to false, and returns 'True' otherwise.  
 -- 
 tiGetFlag :: String -> Capability Bool
-tiGetFlag cap = Capability $ fmap (Just . (>0)) $
+tiGetFlag cap = Capability $ const $ fmap (Just . (>0)) $
                         withCString cap tigetflag
                 
 -- | Look up a boolean capability in the terminfo database, and fail if
@@ -232,7 +232,7 @@ foreign import ccall tigetstr :: CString -> IO CString
 -- | Look up a string capability in the terminfo database.  NOTE: This function is deprecated; use
 -- 'tiGetOutput1' instead.
 tiGetStr :: String -> Capability String
-tiGetStr cap = Capability $ do
+tiGetStr cap = Capability $ const $ do
                 result <- withCString cap tigetstr 
                 if result == nullPtr || result == neg1Ptr
                     then return Nothing
@@ -255,8 +255,10 @@ foreign import ccall tparm ::
 -- with tput without a String marshall in the middle.
 -- directly without 
 
-tParm :: String -> [Int] -> IO String
-tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
+tParm :: String -> Capability ([Int] -> String)
+tParm cap = Capability $ \t -> return $ Just 
+        $ \ps -> unsafePerformIO $ withCurTerm t $
+                    tparm' (map toEnum ps ++ repeat 0)
     where tparm' (p1:p2:p3:p4:p5:p6:p7:p8:p9:_)
             = withCString cap $ \c_cap -> do
                 result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
@@ -267,10 +269,8 @@ tParm cap ps = tparm' (map toEnum ps ++ repeat 0)
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
 tiGetOutput cap = do
     str <- tiGetStr cap
-    -- TODO: make sure to put withCurTerm in here somewhere...
-    -- check this doesn't cause slowdown, maybe just accesses a ptr
-    -- a bunch of times which should be OK?
-    return $ \ps la -> fromStr la $ unsafePerformIO $ tParm str ps
+    f <- tParm str
+    return $ \ps la -> fromStr la $ f ps
 
 fromStr :: LinesAffected -> String -> TermOutput
 fromStr la s = TermOutput (TOCmd la s :)
@@ -301,9 +301,8 @@ tiGetOutput1 :: forall f . OutputCap f => String -> Capability f
 tiGetOutput1 str = do
     cap <- tiGetStr str
     guard (hasOkPadding (undefined :: f) cap)
-    -- TODO: withCurTerm somewhere
-    let listCap xs = unsafePerformIO $ tParm cap xs
-    return $ outputCap listCap []
+    f <- tParm cap
+    return $ outputCap f []
 
 
 -- OK, this is the structure that I want:
