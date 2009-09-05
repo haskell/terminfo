@@ -24,7 +24,9 @@ module System.Console.Terminfo.Keys(
                     keyBackspace,
                     keyDeleteChar,
                     keyHome,
-                    keyEnd
+                    keyEnd,
+                    keyPageUp,
+                    keyPageDown,
                     ) where
 
 import System.Console.Terminfo.Base
@@ -63,3 +65,9 @@ keyHome = tiGetOutput1 "khome"
 
 keyEnd :: Capability String
 keyEnd = tiGetOutput1 "kend"
+
+keyPageUp :: Capability String
+keyPageUp = tiGetOutput1 "kpp"
+
+keyPageDown :: Capability String
+keyPageDown = tiGetOutput1 "knp"
