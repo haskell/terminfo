@@ -267,7 +267,9 @@ tParm cap = Capability $ \t -> return $ Just
     where tparm' (p1:p2:p3:p4:p5:p6:p7:p8:p9:_)
             = withCString cap $ \c_cap -> do
                 result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
-                peekCString result
+                if result == nullPtr
+                    then return ""
+                    else peekCString result
           tparm' _ = fail "tParm: List too short"
 
 -- | Look up an output capability in the terminfo database.  
