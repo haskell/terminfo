@@ -27,6 +27,7 @@ module System.Console.Terminfo.Keys(
                     keyEnd,
                     keyPageUp,
                     keyPageDown,
+                    keyEnter,
                     ) where
 
 import System.Console.Terminfo.Base
@@ -71,3 +72,6 @@ keyPageUp = tiGetOutput1 "kpp"
 
 keyPageDown :: Capability String
 keyPageDown = tiGetOutput1 "knp"
+
+keyEnter :: Capability String
+keyEnter = tiGetOutput1 "kent"
