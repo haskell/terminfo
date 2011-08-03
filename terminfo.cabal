@@ -15,18 +15,21 @@ Description:    This library provides an interface to the terminfo database (via
 Homepage:       http://code.haskell.org/terminfo
 Stability:      Experimental
 Build-type:     Configure
-Build-depends:  base >= 1.0 && < 5,
-                extensible-exceptions >= 0.1.1.0 && < 0.2
+
 extra-source-files: configure.ac configure terminfo.buildinfo.in
 extra-tmp-files: config.log config.status autom4te.cache terminfo.buildinfo
-Extensions:     ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
-                ScopedTypeVariables, FlexibleInstances
-ghc-options:    -Wall
-Exposed-Modules:
-                System.Console.Terminfo
-                System.Console.Terminfo.Base
-                System.Console.Terminfo.Cursor
-                System.Console.Terminfo.Color
-                System.Console.Terminfo.Edit
-                System.Console.Terminfo.Effects
-                System.Console.Terminfo.Keys
+
+Library
+    Build-depends:  base >= 1.0 && < 5,
+                    extensible-exceptions >= 0.1.1.0 && < 0.2
+    Extensions:     ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
+                    ScopedTypeVariables, FlexibleInstances
+    ghc-options:    -Wall
+    Exposed-Modules:
+                    System.Console.Terminfo
+                    System.Console.Terminfo.Base
+                    System.Console.Terminfo.Cursor
+                    System.Console.Terminfo.Color
+                    System.Console.Terminfo.Edit
+                    System.Console.Terminfo.Effects
+                    System.Console.Terminfo.Keys
