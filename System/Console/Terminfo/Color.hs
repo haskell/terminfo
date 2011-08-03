@@ -33,6 +33,8 @@ termColors = tiGetNum "colors"
 
 data Color = Black | Red | Green | Yellow | Blue | Magenta | Cyan
             | White | ColorNumber Int
+        deriving (Show,Eq,Ord)
+
 
 
 colorIntA, colorInt :: Color -> Int
