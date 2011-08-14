@@ -52,7 +52,7 @@ import Foreign.Storable (peek,poke)
 import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
 import System.IO
-import Control.Exception.Extensible
+import Control.Exception
 import Data.Typeable
 
 
