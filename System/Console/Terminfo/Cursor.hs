@@ -56,7 +56,7 @@ import Control.Monad
 termLines :: Capability Int
 termColumns :: Capability Int
 termLines = tiGetNum "lines"
-termColumns = tiGetNum "columns"
+termColumns = tiGetNum "cols"
 
 -- | This flag specifies that the cursor wraps automatically from the last 
 -- column of one line to the first column of the next.
