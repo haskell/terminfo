@@ -43,6 +43,7 @@ module System.Console.Terminfo.Base(
                             ) where
 
 
+import Control.Applicative
 import Control.Monad
 import Data.Monoid
 import Foreign.C
@@ -194,6 +195,10 @@ getCapability term (Capability f) = unsafePerformIO $ withCurTerm term (f term)
 instance Functor Capability where
     fmap f (Capability g) = Capability $ \t -> fmap (fmap f) (g t)
 
+instance Applicative Capability where
+    pure  = return
+    (<*>) = ap
+
 instance Monad Capability where
     return = Capability . const . return . Just
     Capability f >>= g = Capability $ \t -> do
@@ -201,6 +206,10 @@ instance Monad Capability where
         case mx of
             Nothing -> return Nothing
             Just x -> let Capability g' = g x in g' t
+
+instance Alternative Capability where
+    (<|>) = mplus
+    empty = mzero
 
 instance MonadPlus Capability where
     mzero = Capability (const $ return Nothing)
