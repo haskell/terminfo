@@ -14,7 +14,7 @@ Description:    This library provides an interface to the terminfo database (via
                 systems to interact with a variety of terminals using a standard set of capabilities.
 Homepage:       https://github.com/judah/terminfo
 Bug-Reports:    https://github.com/judah/terminfo/issues
-Stability:      Experimental
+Stability:      Stable
 Build-type:     Configure
 
 extra-source-files: configure.ac configure terminfo.buildinfo.in
