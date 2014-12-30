@@ -45,7 +45,9 @@ module System.Console.Terminfo.Base(
 
 import Control.Applicative
 import Control.Monad
+#if !MIN_VERSION_base(4,8,0)
 import Data.Monoid
+#endif
 import Foreign.C
 import Foreign.ForeignPtr
 import Foreign.Ptr
