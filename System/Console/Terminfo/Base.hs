@@ -198,11 +198,11 @@ instance Functor Capability where
     fmap f (Capability g) = Capability $ \t -> fmap (fmap f) (g t)
 
 instance Applicative Capability where
-    pure  = return
+    pure = Capability . const . pure . Just
     (<*>) = ap
 
 instance Monad Capability where
-    return = Capability . const . return . Just
+    return = pure
     Capability f >>= g = Capability $ \t -> do
         mx <- f t
         case mx of
