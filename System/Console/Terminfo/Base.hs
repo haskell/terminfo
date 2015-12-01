@@ -63,8 +63,8 @@ import Data.Typeable
 data TERMINAL
 newtype Terminal = Terminal (ForeignPtr TERMINAL)
 
-foreign import ccall "&" cur_term :: Ptr (Ptr TERMINAL)
-foreign import ccall set_curterm :: Ptr TERMINAL -> IO (Ptr TERMINAL)
+-- Use "unsafe" to make set_curterm faster since it's called quite a bit.
+foreign import ccall unsafe set_curterm :: Ptr TERMINAL -> IO (Ptr TERMINAL)
 foreign import ccall "&" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
 
 foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
@@ -73,19 +73,15 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 -- 
 -- Throws a 'SetupTermError' if the terminfo database could not be read.
 setupTerm :: String -> IO Terminal
-setupTerm term = bracket (peek cur_term) (poke cur_term) $ \_ -> 
+setupTerm term =
     withCString term $ \c_term ->
     with 0 $ \ret_ptr -> do
         -- NOTE: I believe that for the way we use terminfo
         -- (i.e. custom output function)
         -- this parameter does not affect anything.
         let stdOutput = 1
-        {-- Force ncurses to return a new struct rather than
-        a copy of the current one (which it would do if the
-        terminal names are the same).  This prevents problems
-        when calling del_term on a struct shared by more than one
-        Terminal. --}
-        poke cur_term nullPtr
+        -- Save the previous terminal to be restored after calling setupterm.
+        old_term <- set_curterm nullPtr
         -- Call setupterm and check the return value.
         setupterm c_term stdOutput ret_ptr
         ret <- peek ret_ptr
@@ -93,7 +89,7 @@ setupTerm term = bracket (peek cur_term) (poke cur_term) $ \_ ->
             then throwIO $ SetupTermError
                 $ "Couldn't look up terminfo entry " ++ show term
             else do
-                cterm <- peek cur_term
+                cterm <- set_curterm old_term
                 fmap Terminal $ newForeignPtr del_curterm cterm
 
 data SetupTermError = SetupTermError String
@@ -120,14 +116,10 @@ setupTermFromEnv = do
 -- TODO: this isn't really thread-safe...
 withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
-        old_term <- peek cur_term
-        if old_term /= cterm
-            then do
-                    _ <- set_curterm cterm
-                    x <- f
-                    _ <- set_curterm old_term
-                    return x
-            else f
+        old_term <- set_curterm cterm
+        x <- f
+        set_curterm old_term
+        return x
 
 
 ----------------------
