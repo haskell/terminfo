@@ -52,7 +52,7 @@ import Foreign.C
 import Foreign.ForeignPtr
 import Foreign.Ptr
 import Foreign.Marshal
-import Foreign.Storable (peek,poke)
+import Foreign.Storable (peek)
 import System.Environment (getEnv)
 import System.IO.Unsafe (unsafePerformIO)
 import System.IO
@@ -118,7 +118,7 @@ withCurTerm :: Terminal -> IO a -> IO a
 withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
         old_term <- set_curterm cterm
         x <- f
-        set_curterm old_term
+        _ <- set_curterm old_term
         return x
 
 
