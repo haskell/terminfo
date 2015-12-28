@@ -26,6 +26,8 @@ fi
 
 AC_PROG_CC()
 
+AC_USE_SYSTEM_EXTENSIONS
+
 AC_CHECK_HEADER(ncurses.h, CursesIncludes='ncurses.h',
     [AC_CHECK_HEADER(curses.h, CursesIncludes='curses.h', HaveCursesH=NO)])
 
