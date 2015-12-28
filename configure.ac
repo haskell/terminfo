@@ -24,9 +24,6 @@ if test "x$curses_includes" != "xNONE"; then
   TERMINFO_INCLUDE_DIRS=$curses_includes
 fi
 
-AC_ARG_WITH([cc],
-            [C compiler],
-            [CC=$withval])
 AC_PROG_CC()
 
 AC_CHECK_HEADER(ncurses.h, CursesIncludes='ncurses.h',
