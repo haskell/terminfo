@@ -34,6 +34,7 @@ module System.Console.Terminfo.Base(
                             TermOutput(),
                             runTermOutput,
                             hRunTermOutput,
+                            termOutputString,
                             termText,
                             tiGetOutput,
                             LinesAffected,
@@ -161,6 +162,10 @@ termText str = TermOutput (TOStr str :)
 -- | Write the terminal output to the standard output device.
 runTermOutput :: Terminal -> TermOutput -> IO ()
 runTermOutput = hRunTermOutput stdout
+
+-- | Converts a TermOutput back into a plain String (for serialization purposes)
+termOutputString :: TermOutput -> String
+termOutputString (TermOutput to) = concat [case x of TOCmd _ s -> s; TOStr s -> s | x <- to []]
 
 -- | Write the terminal output to the terminal or file managed by the given
 -- 'Handle'.
