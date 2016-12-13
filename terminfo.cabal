@@ -29,7 +29,7 @@ Library
     other-extensions: CPP, DeriveDataTypeable, FlexibleInstances, ScopedTypeVariables
     if impl(ghc>=7.3)
       other-extensions: Safe, Trustworthy
-    build-depends:    base >= 4.3 && < 4.10
+    build-depends:    base >= 4.3 && < 4.11
     ghc-options:      -Wall
     exposed-modules:
                     System.Console.Terminfo
