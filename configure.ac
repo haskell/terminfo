@@ -29,14 +29,17 @@ AC_ARG_WITH([cc],
             [CC=$withval])
 AC_PROG_CC()
 
-AC_CHECK_HEADER(ncurses.h, CursesIncludes='ncurses.h',
-    [AC_CHECK_HEADER(curses.h, CursesIncludes='curses.h', HaveCursesH=NO)])
+AC_CHECK_HEADER(ncurses.h, TERMINFO_INCLUDES='ncurses.h term.h',
+    [AC_CHECK_HEADER(curses.h, TERMINFO_INCLUDES='curses.h term.h',
+        [AC_CHECK_HEADER(ncurses/ncurses.h, TERMINFO_INCLUDES='ncurses/ncurses.h ncurses/term.h',
+            [AC_CHECK_HEADER(ncurses/curses.h, TERMINFO_INCLUDES='ncurses/curses.h ncurses/term.h', HaveCursesH=NO)]
+        )]
+    )]
+)
 
 # on Solaris, curses.h must be imported before term.h.
 if test "x$HaveCursesH" = xNO ; then
     AC_MSG_FAILURE([curses headers could not be found, so this package cannot be built])
-else
-    TERMINFO_INCLUDES="$CursesIncludes term.h"
 fi
 
 AC_CHECK_LIB(tinfo, setupterm, HaveLibCurses=YES; LibCurses=tinfo,
