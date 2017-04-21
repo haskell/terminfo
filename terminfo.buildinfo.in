@@ -1,4 +1,2 @@
-includes: @TERMINFO_INCLUDES@
-include-dirs: @TERMINFO_INCLUDE_DIRS@
 extra-lib-dirs: @TERMINFO_LIB_DIRS@
 extra-libraries: @TERMINFO_LIB@
