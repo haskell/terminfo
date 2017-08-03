@@ -18,11 +18,12 @@ AC_ARG_WITH([cc],
             [CC=$withval])
 AC_PROG_CC()
 
-AC_CHECK_LIB(tinfo, setupterm, HaveLibCurses=YES; LibCurses=tinfo,
-  [AC_CHECK_LIB(ncursesw, setupterm, HaveLibCurses=YES; LibCurses=ncursesw,
-    [AC_CHECK_LIB(ncurses, setupterm, HaveLibCurses=YES; LibCurses=ncurses,
-      [AC_CHECK_LIB(curses, setupterm, HaveLibCurses=YES; LibCurses=curses,
-        HaveLibCurses=NO; LibCurses=not-installed)])])])
+AC_CHECK_LIB(tinfow, setupterm, HaveLibCurses=YES; LibCurses=tinfow,
+  [AC_CHECK_LIB(tinfo, setupterm, HaveLibCurses=YES; LibCurses=tinfo,
+    [AC_CHECK_LIB(ncursesw, setupterm, HaveLibCurses=YES; LibCurses=ncursesw,
+      [AC_CHECK_LIB(ncurses, setupterm, HaveLibCurses=YES; LibCurses=ncurses,
+        [AC_CHECK_LIB(curses, setupterm, HaveLibCurses=YES; LibCurses=curses,
+          HaveLibCurses=NO; LibCurses=not-installed)])])])])
 
 if test "x$HaveLibCurses" = "xNO" ; then
     AC_MSG_FAILURE([curses library not found, so this package cannot be built])
