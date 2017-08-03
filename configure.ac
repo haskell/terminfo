@@ -18,7 +18,7 @@ AC_ARG_WITH([cc],
             [CC=$withval])
 AC_PROG_CC()
 
-AC_CHECK_LIB(tinfow, setupterm, HaveLibCurses=YES; LibCurses=tinfo,
+AC_CHECK_LIB(tinfow, setupterm, HaveLibCurses=YES; LibCurses=tinfow,
   [AC_CHECK_LIB(tinfo, setupterm, HaveLibCurses=YES; LibCurses=tinfo,
     [AC_CHECK_LIB(ncursesw, setupterm, HaveLibCurses=YES; LibCurses=ncursesw,
       [AC_CHECK_LIB(ncurses, setupterm, HaveLibCurses=YES; LibCurses=ncurses,
