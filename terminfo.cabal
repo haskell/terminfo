@@ -7,7 +7,6 @@ License-File:   LICENSE
 Copyright:      (c) Judah Jacobson
 Author:         Judah Jacobson
 Maintainer:     Judah Jacobson <judah.jacobson@gmail.com>
-Category:       User Interfaces
 Synopsis:       Haskell bindings to the terminfo library.
 Description:    This library provides an interface to the terminfo database (via bindings to the
                 curses library).  <http://en.wikipedia.org/wiki/Terminfo Terminfo> allows POSIX
