@@ -1,7 +1,7 @@
-{-# LANGUAGE CPP, DeriveDataTypeable, FlexibleInstances, ScopedTypeVariables #-}
-#if __GLASGOW_HASKELL__ >= 703
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Trustworthy #-}
-#endif
 -- |
 -- Maintainer  : judah.jacobson@gmail.com
 -- Stability   : experimental
@@ -45,11 +45,7 @@ module System.Console.Terminfo.Base(
 
 import Control.Applicative
 import Control.Monad
-#if MIN_VERSION_base(4,9,0)
-import Data.Semigroup
-#elif !MIN_VERSION_base(4,8,0)
-import Data.Monoid
-#endif
+import Data.Semigroup (Semigroup(..))
 import Foreign.C
 import Foreign.ForeignPtr
 import Foreign.Ptr
@@ -142,18 +138,12 @@ newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
 data TermOutputType = TOCmd LinesAffected String
                     | TOStr String
 
-#if MIN_VERSION_base(4,9,0)
 instance Semigroup TermOutput where
     TermOutput xs <> TermOutput ys = TermOutput (xs . ys)
 
 instance Monoid TermOutput where
     mempty  = TermOutput id
     mappend = (<>)
-#else
-instance Monoid TermOutput where
-    mempty = TermOutput id
-    TermOutput xs `mappend` TermOutput ys = TermOutput (xs . ys)
-#endif
 
 termText :: String -> TermOutput 
 termText str = TermOutput (TOStr str :)
