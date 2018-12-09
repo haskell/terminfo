@@ -13,9 +13,6 @@ if test "x$curses_libraries" != "xNONE"; then
   TERMINFO_LIB_DIRS=$curses_libraries
 fi
 
-AC_ARG_WITH([cc],
-            [C compiler],
-            [CC=$withval])
 AC_PROG_CC()
 
 AC_CHECK_LIB(tinfow, setupterm, HaveLibCurses=YES; LibCurses=tinfow,
