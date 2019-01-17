@@ -45,7 +45,7 @@ module System.Console.Terminfo.Base(
 
 import Control.Applicative
 import Control.Monad
-import Data.Semigroup (Semigroup(..))
+import Data.Semigroup as Sem (Semigroup(..))
 import Foreign.C
 import Foreign.ForeignPtr
 import Foreign.Ptr
@@ -138,7 +138,7 @@ newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
 data TermOutputType = TOCmd LinesAffected String
                     | TOStr String
 
-instance Semigroup TermOutput where
+instance Sem.Semigroup TermOutput where
     TermOutput xs <> TermOutput ys = TermOutput (xs . ys)
 
 instance Monoid TermOutput where
