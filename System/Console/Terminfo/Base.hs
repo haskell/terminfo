@@ -70,6 +70,10 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 -- | Initialize the terminfo library to the given terminal entry.
 -- 
 -- Throws a 'SetupTermError' if the terminfo database could not be read.
+--
+-- *Note:* @ncurses@ is not thread-safe; initializing or using multiple
+-- 'Terminal's in different threads at the same time can result in memory
+-- unsafety.
 setupTerm :: String -> IO Terminal
 setupTerm term =
     withCString term $ \c_term ->
