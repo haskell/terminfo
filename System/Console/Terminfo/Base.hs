@@ -1,3 +1,4 @@
+{-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -263,8 +264,8 @@ tiGetStr cap = Capability $ const $ do
 
 
                     
-foreign import ccall tparm ::
-    CString -> CLong -> CLong -> CLong -> CLong -> CLong -> CLong 
+foreign import capi "term.h tparm"
+    tparm :: CString -> CLong -> CLong -> CLong -> CLong -> CLong -> CLong
     -> CLong -> CLong -> CLong -- p1,...,p9
     -> IO CString
 
