@@ -6,6 +6,11 @@ AC_ARG_WITH([curses-libraries],
     [curses_libraries=$withval],
     [curses_libraries=NONE])
 
+AC_ARG_WITH([curses-library],
+  [AC_HELP_STRING([--with-curses-library],
+    [the curses library to link against (tinfow, tinfo, ncursesw, ncurses, curses, ...); default is autodetect.])],
+    [curses_library=$withval],
+    [curses_library=NONE])
 
 TERMINFO_LIB_DIRS=
 if test "x$curses_libraries" != "xNONE"; then
@@ -13,6 +18,7 @@ if test "x$curses_libraries" != "xNONE"; then
   TERMINFO_LIB_DIRS=$curses_libraries
 fi
 
+if test "x$curses_library" == "xNONE"; then
 AC_PROG_CC()
 
 AC_CHECK_LIB(tinfow, setupterm, HaveLibCurses=YES; LibCurses=tinfow,
@@ -28,6 +34,9 @@ else
     TERMINFO_LIB=$LibCurses
 fi
 
+else
+    TERMINFO_LIB=$curses_library
+fi
 
 AC_SUBST(TERMINFO_LIB_DIRS)
 AC_SUBST(TERMINFO_LIB)
