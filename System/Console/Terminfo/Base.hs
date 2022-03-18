@@ -306,7 +306,7 @@ foreign import ccall tputs :: CString -> CInt -> FunPtr CharOutput -> IO ()
 -- this parameter on some terminals to compute variable-length padding.
 type LinesAffected = Int
 
--- | Output a string capability.  Applys padding information to the string if
+-- | Output a string capability.  Applies padding information to the string if
 -- necessary.
 tPuts :: String -> LinesAffected -> FunPtr CharOutput -> IO ()
 tPuts s n putc = withCString s $ \c_str -> tputs c_str (toEnum n) putc
