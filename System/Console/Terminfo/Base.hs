@@ -1,6 +1,5 @@
 {-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Trustworthy #-}
@@ -48,8 +47,6 @@ module System.Console.Terminfo.Base(
 import Control.Applicative
 import Control.Monad
 import Control.Concurrent.MVar (MVar, newMVar, withMVar)
-import Control.DeepSeq (deepseq, NFData)
-import GHC.Generics (Generic)
 import Data.Semigroup as Sem (Semigroup(..))
 import Foreign.C
 import Foreign.ForeignPtr
@@ -153,8 +150,6 @@ newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
 
 data TermOutputType = TOCmd LinesAffected String
                     | TOStr String
-                    deriving (Generic)
-instance NFData TermOutputType
 
 instance Sem.Semigroup TermOutput where
     TermOutput xs <> TermOutput ys = TermOutput (xs . ys)
@@ -175,8 +170,7 @@ runTermOutput = hRunTermOutput stdout
 hRunTermOutput :: Handle -> Terminal -> TermOutput -> IO ()
 hRunTermOutput h term (TermOutput to) = do
     putc_ptr <- mkCallback putc
-    let ts = to []
-    ts `deepseq` (withCurTerm term $ mapM_ (writeToTerm putc_ptr h) ts)
+    mapM_ (writeToTerm term putc_ptr h) (to [])
     freeHaskellFunPtr putc_ptr
     hFlush h
   where
@@ -185,11 +179,11 @@ hRunTermOutput h term (TermOutput to) = do
 
 -- NOTE: Currently, the output is checked every time tparm is called.
 -- It might be faster to check for padding once in tiGetOutput1.
-writeToTerm :: FunPtr CharOutput -> Handle -> TermOutputType -> IO ()
-writeToTerm putc h (TOCmd numLines s)
-    | strHasPadding s = tPuts s numLines putc
+writeToTerm :: Terminal -> FunPtr CharOutput -> Handle -> TermOutputType -> IO ()
+writeToTerm t putc h (TOCmd numLines s)
+    | strHasPadding s = withCurTerm t $ tPuts s numLines putc
     | otherwise = hPutStr h s
-writeToTerm _ h (TOStr s) = hPutStr h s
+writeToTerm _ _ h (TOStr s) = hPutStr h s
 
 infixl 2 <#>
 
