@@ -1,5 +1,6 @@
 {-# LANGUAGE CApiFFI #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Trustworthy #-}
@@ -47,6 +48,8 @@ module System.Console.Terminfo.Base(
 import Control.Applicative
 import Control.Monad
 import Control.Concurrent.MVar (MVar, newMVar, withMVar)
+import Control.DeepSeq (deepseq, NFData)
+import GHC.Generics (Generic)
 import Data.Semigroup as Sem (Semigroup(..))
 import Foreign.C
 import Foreign.ForeignPtr
@@ -150,6 +153,8 @@ newtype TermOutput = TermOutput ([TermOutputType] -> [TermOutputType])
 
 data TermOutputType = TOCmd LinesAffected String
                     | TOStr String
+                    deriving (Generic)
+instance NFData TermOutputType
 
 instance Sem.Semigroup TermOutput where
     TermOutput xs <> TermOutput ys = TermOutput (xs . ys)
@@ -170,7 +175,8 @@ runTermOutput = hRunTermOutput stdout
 hRunTermOutput :: Handle -> Terminal -> TermOutput -> IO ()
 hRunTermOutput h term (TermOutput to) = do
     putc_ptr <- mkCallback putc
-    withCurTerm term $ mapM_ (writeToTerm putc_ptr h) (to [])
+    let ts = to []
+    ts `deepseq` (withCurTerm term $ mapM_ (writeToTerm putc_ptr h) ts)
     freeHaskellFunPtr putc_ptr
     hFlush h
   where

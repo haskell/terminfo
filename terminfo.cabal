@@ -25,10 +25,10 @@ Source-Repository head
 
 Library
     default-language: Haskell2010
-    other-extensions: CPP, DeriveDataTypeable, FlexibleInstances, ScopedTypeVariables
+    other-extensions: CPP, DeriveDataTypeable, DeriveGeneric, FlexibleInstances, ScopedTypeVariables
     if impl(ghc>=7.3)
       other-extensions: Safe, Trustworthy
-    build-depends:    base >= 4.9 && < 4.18
+    build-depends:    base >= 4.9 && < 4.18, deepseq
     ghc-options:      -Wall
     exposed-modules:
                     System.Console.Terminfo
