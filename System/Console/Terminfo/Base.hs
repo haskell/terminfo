@@ -196,7 +196,7 @@ infixl 2 <#>
 newtype Capability a = Capability (Terminal -> IO (Maybe a))
 
 getCapability :: Terminal -> Capability a -> Maybe a
-getCapability term (Capability f) = unsafePerformIO $ withCurTerm term (f term)
+getCapability term (Capability f) = unsafePerformIO $ f term
 
 -- Note that the instances for Capability of Functor, Monad and MonadPlus 
 -- use the corresponding instances for Maybe.
@@ -231,8 +231,8 @@ foreign import ccall tigetnum :: CString -> IO CInt
 
 -- | Look up a numeric capability in the terminfo database.
 tiGetNum :: String -> Capability Int 
-tiGetNum cap = Capability $ const $ do
-                n <- fmap fromEnum (withCString cap tigetnum)
+tiGetNum cap = Capability $ \term -> do
+                n <- fmap fromEnum $ withCurTerm term $ withCString cap tigetnum
                 if n >= 0
                     then return (Just n)
                     else return Nothing
@@ -244,8 +244,8 @@ foreign import ccall tigetflag :: CString -> IO CInt
 -- capability is absent or set to false, and returns 'True' otherwise.  
 -- 
 tiGetFlag :: String -> Capability Bool
-tiGetFlag cap = Capability $ const $ fmap (Just . (>0)) $
-                        withCString cap tigetflag
+tiGetFlag cap = Capability $ \term -> fmap (Just . (>0))
+                        $ withCurTerm term $ withCString cap tigetflag
                 
 -- | Look up a boolean capability in the terminfo database, and fail if
 -- it\'s not defined.
@@ -258,8 +258,8 @@ foreign import ccall tigetstr :: CString -> IO CString
 -- | Look up a string capability in the terminfo database.  NOTE: This function is deprecated; use
 -- 'tiGetOutput1' instead.
 tiGetStr :: String -> Capability String
-tiGetStr cap = Capability $ const $ do
-                result <- withCString cap tigetstr 
+tiGetStr cap = Capability $ \term -> do
+                result <- withCurTerm term $ withCString cap tigetstr 
                 if result == nullPtr || result == neg1Ptr
                     then return Nothing
                     else fmap Just (peekCString result)
@@ -283,15 +283,15 @@ foreign import capi "term.h tparm"
 
 tParm :: String -> Capability ([Int] -> String)
 tParm cap = Capability $ \t -> return $ Just 
-        $ \ps -> unsafePerformIO $ withCurTerm t $
-                    tparm' (map toEnum ps ++ repeat 0)
-    where tparm' (p1:p2:p3:p4:p5:p6:p7:p8:p9:_)
+        $ \ps -> unsafePerformIO $
+                    tparm' t (map toEnum ps ++ repeat 0)
+    where tparm' t (p1:p2:p3:p4:p5:p6:p7:p8:p9:_)
             = withCString cap $ \c_cap -> do
-                result <- tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
+                result <- withCurTerm t $ tparm c_cap p1 p2 p3 p4 p5 p6 p7 p8 p9
                 if result == nullPtr
                     then return ""
                     else peekCString result
-          tparm' _ = fail "tParm: List too short"
+          tparm' _ _ = fail "tParm: List too short"
 
 -- | Look up an output capability in the terminfo database.  
 tiGetOutput :: String -> Capability ([Int] -> LinesAffected -> TermOutput)
