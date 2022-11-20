@@ -46,6 +46,7 @@ module System.Console.Terminfo.Base(
 
 import Control.Applicative
 import Control.Monad
+import Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import Data.Semigroup as Sem (Semigroup(..))
 import Foreign.C
 import Foreign.ForeignPtr
@@ -68,6 +69,14 @@ foreign import ccall "&" del_curterm :: FunPtr (Ptr TERMINAL -> IO ())
 
 foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 
+{-# NOINLINE curtermLock #-}
+curtermLock :: MVar ()
+curtermLock = unsafePerformIO $ newMVar ()
+
+withCurtermLock :: IO a -> IO a
+withCurtermLock f = withMVar curtermLock $ \_ -> f
+
+
 -- | Initialize the terminfo library to the given terminal entry.
 -- 
 -- Throws a 'SetupTermError' if the terminfo database could not be read.
@@ -76,7 +85,7 @@ foreign import ccall setupterm :: CString -> CInt -> Ptr CInt -> IO ()
 -- 'Terminal's in different threads at the same time can result in memory
 -- unsafety.
 setupTerm :: String -> IO Terminal
-setupTerm term =
+setupTerm term = withCurtermLock $
     withCString term $ \c_term ->
     with 0 $ \ret_ptr -> do
         -- NOTE: I believe that for the way we use terminfo
@@ -116,9 +125,8 @@ setupTermFromEnv = do
     handleBadEnv :: IOException -> IO String
     handleBadEnv _ = return ""
 
--- TODO: this isn't really thread-safe...
 withCurTerm :: Terminal -> IO a -> IO a
-withCurTerm (Terminal term) f = withForeignPtr term $ \cterm -> do
+withCurTerm (Terminal term) f = withCurtermLock $ withForeignPtr term $ \cterm -> do
         old_term <- set_curterm cterm
         x <- f
         _ <- set_curterm old_term
