@@ -7,4 +7,4 @@ Building
 --------
 
 * `terminfo` requires a `configure` script; to build it, run `autoreconf -i`.
-* Build `terminfo` with `cabal build`.
+* Build `terminfo` with either `stack build` or `cabal build`.
