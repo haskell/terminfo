@@ -8,3 +8,10 @@ Building
 
 * `terminfo` requires a `configure` script; to build it, run `autoreconf -i`.
 * Build `terminfo` with either `stack build` or `cabal build`.
+
+Building on Windows
+-------------------
+
+While using this package on Windows is not officially supported,
+users wanting to build it on Windows might find [this
+ticket](https://github.com/judah/terminfo/issues/46) helpful.
