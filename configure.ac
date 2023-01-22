@@ -1,7 +1,7 @@
 AC_INIT([Haskell terminfo package], [0.2], [judah dot jacobson at gmail dot com], [terminfo])
 
 AC_ARG_WITH([curses-libraries],
-  [AC_HELP_STRING([--with-curses-libraries],
+  [AS_HELP_STRING([--with-curses-libraries],
     [directory containing curses library])],
     [curses_libraries=$withval],
     [curses_libraries=NONE])
