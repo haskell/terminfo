@@ -60,6 +60,9 @@ import Data.Typeable
 
 
 data TERMINAL
+
+-- | 'Terminal' objects are automatically freed by the garbage collector.
+--   Hence, there is no equivalent of @del_curterm@ here.
 newtype Terminal = Terminal (ForeignPtr TERMINAL)
 
 -- Use "unsafe" to make set_curterm faster since it's called quite a bit.
