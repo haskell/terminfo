@@ -18,7 +18,7 @@ if test "x$curses_libraries" != "xNONE"; then
   TERMINFO_LIB_DIRS=$curses_libraries
 fi
 
-if test "x$curses_library" == "xNONE"; then
+if test "x$curses_library" = "xNONE"; then
 AC_PROG_CC()
 
 AC_CHECK_LIB(tinfow, setupterm, HaveLibCurses=YES; LibCurses=tinfow,
