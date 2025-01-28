@@ -4,5 +4,6 @@ config.log
 config.status
 configure
 dist-install
+dist-newstyle
 ghc.mk
 terminfo.buildinfo
