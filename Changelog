@@ -1,5 +1,9 @@
 # Changelog of `terminfo`
 
+## Changed in version 0.4.1.7:
+
+- Fix POSIX compliance issue in `configure` script
+
 ## Changed in version 0.4.1.6:
 
 - Minor documentation fixes
