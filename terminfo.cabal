@@ -11,8 +11,8 @@ Synopsis:       Haskell bindings to the terminfo library.
 Description:    This library provides an interface to the terminfo database (via bindings to the
                 curses library).  <http://en.wikipedia.org/wiki/Terminfo Terminfo> allows POSIX
                 systems to interact with a variety of terminals using a standard set of capabilities.
-Homepage:       https://github.com/judah/terminfo
-Bug-Reports:    https://github.com/judah/terminfo/issues
+Homepage:       https://github.com/haskell/terminfo
+Bug-Reports:    https://github.com/haskell/terminfo/issues
 Stability:      Stable
 Build-type:     Configure
 
@@ -21,7 +21,7 @@ extra-tmp-files: config.log config.status autom4te.cache terminfo.buildinfo
 
 Source-Repository head
     type:     git
-    location: https://github.com/judah/terminfo.git
+    location: https://github.com/haskell/terminfo.git
 
 Library
     default-language: Haskell2010
