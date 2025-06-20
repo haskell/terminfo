@@ -5,5 +5,6 @@ config.status
 configure
 configure~
 dist-install
+dist-newstyle
 ghc.mk
 terminfo.buildinfo
